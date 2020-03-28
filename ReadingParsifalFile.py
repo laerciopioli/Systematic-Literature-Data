@@ -8,6 +8,21 @@ import plotly
 import pandas as pd
 import math
 
+#bibtex_key = row[0]
+#title = row[1]
+
+#selection_criteria = row[2]
+#Extract -> Print
+
+#status = row[3]
+#Print
+
+#comments = row[4]
+#[1]-[2]-[3]
+#[4]-[5]-[6]
+#Extract ->Create->Print
+
+#Extract -> Total e ByCriteria
 
 plotly.io.orca.config.executable = '/home/laercio/anaconda3/bin/orca'
 
@@ -26,6 +41,7 @@ dict_devicesByCriteria={}
 dict_benchmarks = {}
 dict_power = {"Y":0,"N":0}
 dict_powerByCriteria = {}
+dict_H2H_ReachedObject = {}
 
 
 
@@ -116,12 +132,6 @@ def InsertHeadAndTailBenchmark(head, tails):
 
 
 def InsertOnlyHeadBenchmark(benchmark): #this function receives an unique benchmak to be appened to the dictionary
-    '''
-    if testando in benchmark:
-        print(title)
-        print("teste")
-    '''
-
     if benchmark not in dict_benchmarks.keys(): #se o benchmark não está nas chaves eu somente insiro
         dict_benchmarks[benchmark]= {}
         dict_benchmarks[benchmark][1]={}
@@ -137,11 +147,6 @@ def InsertOnlyHeadBenchmark(benchmark): #this function receives an unique benchm
 
 
 def ExtractBenchmark(benchmarks,title):
-    #[Linux(wc&grep)&App(Sphinx-3)&specific]
-    '''
-    if title == "Simultaneous Evaluation of Multiple I/O Strategies":
-        print("verificar no corte do benchmark")
-    '''
     head = ""
     tail = ""
     word = ""
@@ -188,14 +193,13 @@ def ExtractBenchmark(benchmarks,title):
 
 
 
-def ExtractPower(power,selection_criteria):
+def ExtractANDCreateDict_Power(power,selection_criteria):
     if "Y" in power:
         cont = dict_power['Y']
         dict_power['Y'] = cont + 1
     elif "N" in power:
         cont = dict_power['N']
         dict_power['N'] = cont + 1
-
 
     if selection_criteria not in dict_powerByCriteria:
         dict_powerByCriteria[selection_criteria]= {"Y":0,"N":0}
@@ -206,91 +210,7 @@ def ExtractPower(power,selection_criteria):
         cont = dict_powerByCriteria[selection_criteria]["N"]
         dict_powerByCriteria[selection_criteria]["N"] = cont + 1
 
-
-def ExtractSelectioCriteria(selection_criteria):
-    if selection_criteria not in dict_selectionCriteria:
-        dict_selectionCriteria[selection_criteria] = 1
-    else:
-        val = dict_selectionCriteria[selection_criteria]
-        dict_selectionCriteria[selection_criteria] = val + 1
-
-def ExtractImprovedObject(improvedObject,selection_criteria):
-    for selection_criteria, value in dict_devicesByCriteria.items():
-        if selection_criteria == "H2H-IO -Hard-2-improve-IO-on-Hardware":
-            #[on-chip access control memory-STT-RAM- (ACM)SSD(FeSSD)]-[SSD[DiskSim]]-[SSD&STT-RAM]
-            CreateDevicesChart(value,title,explode)
-        elif selection_criteria == "H2S-IO -Hard-2-improve-IO-on-Software":
-            #[Determine the Hardware Choice(DRAM)]-[File System(HDFS)]-[DRAM]
-            CreateDevicesChart(value, title, explode)
-        elif selection_criteria == "H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems":
-            #[DMA cache technique (DDC)]-[Storage System[FPGA Emulation Platform]]-[Memory&cache]
-            CreateDevicesChart(value, title, explode)
-        elif selection_criteria == "S2S-IO -Soft-2-improve-IO-on-Software":
-            #[non-blocking API extensions]-[Memcached[Libmemcached APIs]]-[SSD&Memory]
-            CreateDevicesChart(value, title, explode)
-        elif selection_criteria == "S2H-IO -Soft-2-improve-IO-on-Hardware":
-            #[I/O link over-clocking]-[SSD[nf][rd(Altera Stratix IV GX FPGA PCle)]-[SSD]
-            CreateDevicesChart(value, title, explode)
-        elif selection_criteria == "S2SS-IO -Soft-2-improve-IO-on-Storage-Systems":
-            # [writeback scheme(DFW)]-[Stotrage System[File System(EXT3)][rsee(1m2d)]]-[HDD&SSD]
-            CreateDevicesChart(value, title, explode)
-        elif selection_criteria == "ARCHITECTURE":
-            #[duplication-aware flash cache architecture (DASH)]-[Cloud[rsee(1m)]]-[Flash&HDD]
-            CreateDevicesChart(value, title, explode)
-
-def ExtractComments(comment, title, selection_criteria):
-    comment = comment.replace("]\n[", "]-[");
-    line = comment.split(']-[')
-    if len(line) < 6:
-        papersToVerify.append(title)
-    else:
-        text = line[0]
-        #print(text)
-        improvedObject = line[1]
-        ExtractImprovedObject(improvedObject,selection_criteria)
-        devices = line[2]
-        ExtractDevice(devices, selection_criteria)
-        concerning = line[3]
-        #print(concerning)
-        power = line[4]
-        ExtractPower(power,selection_criteria)
-        #print(power)
-        benchmarks = line[5]
-        ExtractBenchmark(benchmarks,title)
-        #print("proxima linha \n")
-
-def verifyStatus(status, comments, selection_criteria):
-    global duplicated
-    global accepted
-    global rejected
-
-    if status == "Duplicated":
-        duplicated += 1
-    elif status == "Accepted":
-        accepted += 1
-        ExtractComments(comments, title, selection_criteria)
-        ExtractSelectioCriteria(selection_criteria)
-    elif status == "Rejected":
-        rejected += 1
-
-
-def printStatus():
-    global duplicated
-    global accepted
-    global rejected
-
-    labels = ['Reject', 'Accepted', 'Duplicated']
-    qtdLabels = [rejected, accepted, duplicated]
-
-    explode = (0, 0.1, 0.05)  # only "explode" the 2nd slice (i.e. 'Hogs')
-    colors = ['red', 'green', 'yellow']
-    fig1, ax1 = plt.subplots()
-    ax1.pie(qtdLabels, labels=labels, explode=explode, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors)
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-
-    plt.show()
-
-def printEnergyChart(dict_power):
+def printPowerChart():
     labelYesNo = []
     for key, value in dict_power.items():
         if key == "Y":
@@ -309,7 +229,204 @@ def printEnergyChart(dict_power):
 
     plt.show()
 
-def printBenchmarksChart(dict_benchmarks):
+
+def printPowerChartByCriteria(): # {'S2SS-IO -Soft-2-improve-IO-on-Storage-Systems': {'Y': 12, 'N': 197}, 'H2H-IO -Hard-2-improve-IO-on-Hardware': {'Y': 10, 'N': 2}, 'S2H-IO -Soft-2-improve-IO-on-Hardware': {'Y': 10, 'N': 106}, 'ARCHITECTURE': {'Y': 11, 'N': 71}, 'S2S-IO -Soft-2-improve-IO-on-Software': {'Y': 5, 'N': 102}, 'H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems': {'Y': 1, 'N': 15}, 'H2S-IO -Hard-2-improve-IO-on-Software': {'Y': 1, 'N': 8}}
+    print("!FAZER FUNçÂAAOOOO")
+    labels = []
+    colors =[]
+    labels2 = ['Yes', 'No']
+    percent=[]
+
+    for criteria,value in dict_powerByCriteria.items():
+        if "H2SS-IO" in criteria:
+            for letter,val in value.items():
+                if letter == 'Y':
+                    yes = int(val)
+                elif letter == 'N':
+                    no=int(val)
+            total=yes+no
+            xyes=(yes*100)/total
+            xno =(no*100)/total
+            percent.append(round(xyes,0))
+            percent.append(round(xno,0))
+            labels.append("H2SS-IO")
+            colors.append("green")
+
+    for criteria, value in dict_powerByCriteria.items():
+        if "S2SS-IO" in criteria:
+            for letter,val in value.items():
+                if letter == 'Y':
+                    yes = int(val)
+                elif letter == 'N':
+                    no=int(val)
+            total=yes+no
+            xyes=(yes*100)/total
+            xno =(no*100)/total
+            percent.append(round(xyes,0))
+            percent.append(round(xno,0))
+            labels.append("S2SS-IO")
+            colors.append("red")
+
+    for criteria, value in dict_powerByCriteria.items():
+        if "S2H-IO" in criteria:
+            for letter,val in value.items():
+                if letter == 'Y':
+                    yes = int(val)
+                elif letter == 'N':
+                    no=int(val)
+            total=yes+no
+            xyes=(yes*100)/total
+            xno =(no*100)/total
+            percent.append(round(xyes,0))
+            percent.append(round(xno,0))
+            labels.append("S2H-IO")
+            colors.append("tomato")
+
+    for criteria, value in dict_powerByCriteria.items():
+        if "S2S-IO" in criteria:
+            for letter,val in value.items():
+                if letter == 'Y':
+                    yes = int(val)
+                elif letter == 'N':
+                    no=int(val)
+            total=yes+no
+            xyes=(yes*100)/total
+            xno =(no*100)/total
+            percent.append(round(xyes,0))
+            percent.append(round(xno,0))
+            labels.append("S2S-IO")
+            colors.append("salmon")
+
+    for criteria, value in dict_powerByCriteria.items():
+        if "ARCHITECTURE" in criteria:
+            for letter,val in value.items():
+                if letter == 'Y':
+                    yes = int(val)
+                elif letter == 'N':
+                    no=int(val)
+            total=yes+no
+            xyes=(yes*100)/total
+            xno =(no*100)/total
+            percent.append(round(xyes,0))
+            percent.append(round(xno,0))
+            labels.append("ARCHITECTURE")
+            colors.append("yellow")
+
+
+
+    for criteria, value in dict_powerByCriteria.items():
+        if "H2H-IO" in criteria:
+            for letter,val in value.items():
+                if letter == 'Y':
+                    yes = int(val)
+                elif letter == 'N':
+                    no=int(val)
+            total=yes+no
+            xyes=(yes*100)/total
+            xno =(no*100)/total
+            percent.append(round(xyes,0))
+            percent.append(round(xno,0))
+            labels.append("H2H-IO")
+            colors.append("lightgreen")
+
+    for criteria, value in dict_powerByCriteria.items():
+        if "H2S-IO" in criteria:
+            for letter,val in value.items():
+                if letter == 'Y':
+                    yes = int(val)
+                elif letter == 'N':
+                    no=int(val)
+            total=yes+no
+            xyes=(yes*100)/total
+            xno =(no*100)/total
+            percent.append(round(xyes,0))
+            percent.append(round(xno,0))
+            labels.append("H2S-IO")
+            colors.append("olive")
+
+
+
+
+
+
+
+
+            #colors=['green','red','yellow','lightgreen','olive','salmon','tomato'],
+            #labels=['H2SS-IO','S2SS-IO','Architecture', 'H2H-IO', 'H2S-IO', 'S2S-IO', 'S2H-IO'],
+    plt.pie([1,1,1,1,1,1,1], radius=1,
+            colors=colors,
+            labels=labels,
+            pctdistance=0.85, shadow=True,
+            wedgeprops=dict(width=0.3, edgecolor='white'),startangle=40)
+
+    plt.pie(percent, radius=0.7,
+            colors=['xkcd:green','xkcd:red','xkcd:green','xkcd:red','xkcd:green','xkcd:red','xkcd:green','xkcd:red','xkcd:green','xkcd:red',
+                    'xkcd:green','xkcd:red','xkcd:green','xkcd:red'],
+            wedgeprops=dict(width=0.3, edgecolor='white'), labels=percent,
+            #autopct='%.2f%%',
+            pctdistance=0.9, labeldistance=0.8, shadow=True,startangle=40)
+    plt.legend(labels=labels2, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 15},bbox_transform=plt.gcf().transFigure, title="Power Concerning")
+    plt.axis('equal')
+    plt.title('Power Concerning According to the Classification Model')
+    plt.show()
+
+
+def ExtractImprovedObject(improvedObject,selection_criteria):
+    if selection_criteria == "H2H-IO -Hard-2-improve-IO-on-Hardware":
+        #[on-chip access control memory-STT-RAM- (ACM)SSD(FeSSD)]-[SSD[DiskSim]]-[SSD&STT-RAM]
+        CreateDict_H2H_improvedObject(improvedObject)
+    elif selection_criteria == "H2S-IO -Hard-2-improve-IO-on-Software":
+        #[Determine the Hardware Choice(DRAM)]-[File System(HDFS)]-[DRAM]
+        print("teste")
+        #ExtractH2HDevices(improvedObject)
+    elif selection_criteria == "H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems":
+        #[DMA cache technique (DDC)]-[Storage System[FPGA Emulation Platform]]-[Memory&cache]
+        #ExtractH2HDevices(improvedObject)
+        print("teste")
+    elif selection_criteria == "S2S-IO -Soft-2-improve-IO-on-Software":
+        #[non-blocking API extensions]-[Memcached[Libmemcached APIs]]-[SSD&Memory]
+        #ExtractH2HDevices(improvedObject)
+        print("teste")
+    elif selection_criteria == "S2H-IO -Soft-2-improve-IO-on-Hardware":
+        #[I/O link over-clocking]-[SSD[nf][rd(Altera Stratix IV GX FPGA PCle)]-[SSD]
+        #ExtractH2HDevices(improvedObject)
+        print("teste")
+    elif selection_criteria == "S2SS-IO -Soft-2-improve-IO-on-Storage-Systems":
+        # [writeback scheme(DFW)]-[Stotrage System[File System(EXT3)][rsee(1m2d)]]-[HDD&SSD]
+        #ExtractH2HDevices(improvedObject)
+        print("teste")
+    elif selection_criteria == "ARCHITECTURE":
+        #[duplication-aware flash cache architecExtractH2HDevices(improvedObject)ture (DASH)]-[Cloud[rsee(1m)]]-[Flash&HDD]
+        #ExtractH2HDevices(improvedObject)
+        print("teste")
+
+
+def CreateDict_H2H_improvedObject(improvedObject):
+    if improvedObject not in dict_H2H_ReachedObject:
+        dict_H2H_ReachedObject[improvedObject] = 1
+    else:
+        val = dict_H2H_improvedObject[improvedObject]
+        dict_H2H_ReachedObject[improvedObject] = val + 1
+
+
+def print_H2H_ReachedObject():
+    labels = []
+    qtdLabels = []
+
+    for device, value in dict_H2H_ReachedObject.items():
+        labels.append(device)
+        qtdLabels.append(value)
+
+    #colors = ['red', 'green', 'yellow']
+    fig1, ax1 = plt.subplots()
+    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270)
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+    plt.show()
+
+
+
+def printBenchmarksChart():
     plt.rcParams.update({'font.size': 8.0})
     benchname = []
     benchvalue= []
@@ -331,34 +448,7 @@ def printBenchmarksChart(dict_benchmarks):
 
     plt.show()
 
-    ''' 
-    y_pos = np.arange(len(benchvalue))
-    plt.barh(y_pos, benchvalue, align='center', alpha=0.5)
-    plt.yticks(y_pos, benchname)
-    for i, v in enumerate(benchvalue):
-        plt.text(v, i, str(v), color='red', va='center',size=8)
-
-    plt.xlabel('Usage')
-    plt.ylabel('XXXXXXXXXXXXXXXXXxx')
-    plt.title('Programming language usage')
-
-    plt.show()
-    '''
-    '''
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=benchname,
-        y=benchvalue,
-        name='Primary Product',
-        marker_color='indianred'
-    ))
-    fig.update_layout(title='Least Used Feature', title_font_size=30, xaxis_title='Workloads', yaxis_title='Occurence Number')
-    fig.update_layout(barmode='group', xaxis_tickangle=-45)
-    fig.show()
-
-    '''
-
-def printSelectioCriteria(dict_selectionCriteria):
+def printSelectioCriteria():
     plt.rcParams.update({'font.size': 8.0})
     Criterianame = []
     Criteriavalue = []
@@ -419,37 +509,37 @@ def printSelectioCriteria(dict_selectionCriteria):
     plt.tight_layout()
     plt.show()
 
-def printDevicesChart(dict_devices):
+def printDevicesChart():
     explode = (0.01, 0.025, 0.015, 0.02, 0.03, 0.04, 0.05, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.015)
     title = "Most Used Devices"
-    CreateDevicesChart(dict_devices, title, explode)
+    CreateDevicesChartByCriteria(dict_devices, title, explode)
 
-def printDevicesChartByCriteria(dict_devicesByCriteria):
+def printDevicesChartByCriteria():
     explode = None
     for criteria, value in dict_devicesByCriteria.items():
         if criteria == "H2H-IO -Hard-2-improve-IO-on-Hardware":
             title = "H2H-IO"
-            CreateDevicesChart(value,title,explode)
+            CreateDevicesChartByCriteria(value,title,explode)
         elif criteria == "H2S-IO -Hard-2-improve-IO-on-Software":
             title  = "H2S-IO"
-            CreateDevicesChart(value, title, explode)
+            CreateDevicesChartByCriteria(value, title, explode)
         elif criteria == "H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems":
             title  = "H2SS-IO"
-            CreateDevicesChart(value, title, explode)
+            CreateDevicesChartByCriteria(value, title, explode)
         elif criteria == "S2S-IO -Soft-2-improve-IO-on-Software":
             title  = "S2S-IO"
-            CreateDevicesChart(value, title, explode)
+            CreateDevicesChartByCriteria(value, title, explode)
         elif criteria == "S2H-IO -Soft-2-improve-IO-on-Hardware":
             title  = "S2H-IO"
-            CreateDevicesChart(value, title, explode)
+            CreateDevicesChartByCriteria(value, title, explode)
         elif criteria == "S2SS-IO -Soft-2-improve-IO-on-Storage-Systems":
             title  = "S2SS-IO"
-            CreateDevicesChart(value, title, explode)
+            CreateDevicesChartByCriteria(value, title, explode)
         elif criteria == "ARCHITECTURE":
             title  = "ARCH"
-            CreateDevicesChart(value, title, explode)
+            CreateDevicesChartByCriteria(value, title, explode)
 
-def CreateDevicesChart(dict_devices,title,explode):
+def CreateDevicesChartByCriteria(dict_devices,title,explode):
     devices = []
     qtdDevices = []
     colors = []
@@ -574,6 +664,136 @@ def CreateDevicesChart(dict_devices,title,explode):
         plt.show()
 
 
+def printStatus():
+    global duplicated
+    global accepted
+    global rejected
+
+    labels = ['Reject', 'Accepted', 'Duplicated']
+    qtdLabels = [rejected, accepted, duplicated]
+
+    explode = (0, 0.1, 0.05)  # only "explode" the 2nd slice (i.e. 'Hogs')
+    colors = ['red', 'green', 'yellow']
+    fig1, ax1 = plt.subplots()
+    ax1.pie(qtdLabels, labels=labels, explode=explode, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors)
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+    plt.show()
+
+def ExtractComments(comment, title, selection_criteria):
+    comment = comment.replace("]\n[", "]-[");
+    line = comment.split(']-[')
+    if len(line) < 6:
+        papersToVerify.append(title)
+    else:
+        text = line[0]
+        #print(text)
+        improvedObject = line[1]
+        ExtractImprovedObject(improvedObject,selection_criteria)
+        devices = line[2]
+        ExtractDevice(devices, selection_criteria)
+        concerning = line[3]
+        #print(concerning)
+        power = line[4]
+        ExtractANDCreateDict_Power(power,selection_criteria)
+        #print(power)
+        benchmarks = line[5]
+        ExtractBenchmark(benchmarks,title)
+        #print("proxima linha \n")
+
+
+def ExtractSelectioCriteria(selection_criteria):
+    if selection_criteria not in dict_selectionCriteria:
+        dict_selectionCriteria[selection_criteria] = 1
+    else:
+        val = dict_selectionCriteria[selection_criteria]
+        dict_selectionCriteria[selection_criteria] = val + 1
+
+def ExtractStatus(status, comments, selection_criteria):
+    global duplicated
+    global accepted
+    global rejected
+
+    if status == "Duplicated":
+        duplicated += 1
+    elif status == "Accepted":
+        accepted += 1
+        ExtractComments(comments, title, selection_criteria)
+        ExtractSelectioCriteria(selection_criteria)
+    elif status == "Rejected":
+        rejected += 1
+
+
+
+
+def menu():
+    escolha = int(input(''' Choose an option to print please!!
+
+1 - printStatus()
+2 - printPowerChart()
+3 - printPowerChartByCriteria()
+4 - printDevicesChart()
+5 - printDevicesChartByCriteria()
+6 - printBenchmarksChart()
+7 - printSelectioCriteria()
+8 - print_H2H_ReachedObject()
+9 - 
+0 - Para voltar ao menu
+Escolha: \n''' ))
+
+    if escolha == 1:
+        print("accepted", accepted)
+        print("duplicated", duplicated)
+        print("rejected", rejected)
+        printStatus()
+        menu()
+        pass
+    elif escolha == 2:
+        print(dict_power)
+        printPowerChart()
+        menu()
+        pass
+    elif escolha == 3:
+        print(dict_powerByCriteria)
+        printPowerChartByCriteria()
+        menu()
+        pass
+    elif escolha == 4:
+        print(dict_devices.items())
+        printDevicesChart()
+        menu()
+        pass
+    elif escolha == 5:
+        print(dict_devicesByCriteria.items())
+        printDevicesChartByCriteria()
+        menu()
+        pass
+    elif escolha == 6:
+
+        printBenchmarksChart()
+        menu()
+        pass
+    elif escolha == 7:
+
+        printSelectioCriteria()
+        menu()
+
+        pass
+    elif escolha == 8:
+        print(dict_H2H_ReachedObject.items())
+        print_H2H_ReachedObject()
+        menu()
+        pass
+    elif escolha == 9:
+        print("FAZER")
+        menu()
+
+        pass
+
+    elif escolha == 0:
+        print("\nEND!")
+        pass
+
 
 for f in filenames:
     path = "/home/laercio/github/ReadingParsifal/" + f
@@ -582,70 +802,17 @@ for f in filenames:
         readCSV = csv.reader(csvfile, delimiter=',')
         data = {}
         for row in readCSV:
-            '''
-            bibtex_key = row[0]
-            title = row[1]
-            author = row[2]
-            journal = row[3]
-            year = row[4]
-            source = row[5]
-            pages = row[6]
-            volume = row[7]
-            abstract = row[8]
-            document_type = row[9]
-            doi = row[10]
-            url = row[11]
-            affiliation = row[12]
-            author_keywords = row[13]
-            keywords = row[14]
-            publisher = row[15]
-            issn = row[16]
-            language = row[17]
-            note = row[18]
-            selection_criteria = row[19]
-            created_at = row[20]
-            updated_at = row[21]
-            created_by = row[22]
-            updated_by = row[23]
-            status = row[24]
-            comments = row[25]
-            '''
             bibtex_key = row[0]
             title = row[1]
             selection_criteria = row[2]
             status = row[3]
             comments = row[4]
 
-            verifyStatus(status, comments, selection_criteria)
+            ExtractStatus(status, comments, selection_criteria)
 
 
 
-
-print("accepted", accepted)
-print("duplicated", duplicated)
-print("rejected", rejected)
-#printStatus() #print the Reject, Accepted and Duplicated quantity of papers
-
-print(dict_power)
-#printEnergyChart(dict_power)
-
-print(dict_devices.items())
-print(dict_devicesByCriteria.items())
-#printDevicesChart(dict_devices)
-#printDevicesChartByCriteria(dict_devicesByCriteria)
-
-
-print("dict_benchmark size ->", len(dict_benchmarks),dict_benchmarks.items())
-#printBenchmarksChart(dict_benchmarks)
-#printSelectioCriteria(dict_selectionCriteria)
-
-
-print("papers to verify --->>>",papersToVerify)
-
-
-
-
-
+menu()
 
 
 
