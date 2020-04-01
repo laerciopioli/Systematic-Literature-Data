@@ -24,6 +24,12 @@ import math
 
 #Extract -> Total e ByCriteria
 
+# Normalmente os Extracts são pré calculados, ai dependendo da escolha se calcula o Calculate e depois os prints
+
+
+
+
+
 plotly.io.orca.config.executable = '/home/laercio/anaconda3/bin/orca'
 
 plt.rcParams.update({'font.size': 10.0})
@@ -42,12 +48,14 @@ dict_benchmarks = {}
 dict_power = {"Y":0,"N":0}
 dict_powerByCriteria = {}
 dict_H2H_ReachedObject = {}
+dict_H2S_ReachedObject = {}
+dict_H2SS_ReachedObject = {}
+
 
 
 
 
 characters_to_remove = "[]()&"
-
 papersToVerify = []
 
 duplicated = 0
@@ -55,53 +63,86 @@ accepted = 0
 rejected = 0
 
 
-testando = "MICROSOFT"
-
-
-def ExtractDevice(devices,selection_criteria):
-    device = devices.split('&')
-    for dispositive in device:
-        dispositive = dispositive.upper()
-        if dispositive == "DRAM" or dispositive == "RAM" or dispositive == "MEMORY" or dispositive == "DRAM(WIDEIO2)" or dispositive == "DRAM(LPDDR4)":
-            dispositive = "DRAM"
-        if "M.2" in dispositive or dispositive == "M.2(NVME)" or dispositive == "M.2(SSD)":
-            dispositive = "M.2"
-        if  dispositive == "PCM" or dispositive == "PRAM" or dispositive == "PCME" or dispositive == "PCRAM" or dispositive == "OUM":
-            dispositive = "PCM"
-        if  dispositive == "FERAM" or dispositive == "F-RAM" or dispositive == "FRAM":
-            dispositive = "FERAM"
-        if  dispositive == "FLASH" or dispositive == "NAND FLASH" or dispositive == "NAND":
-            dispositive = "FLASH"
-
-        #insert all devices into dict_devices dictionary
-        if dispositive not in dict_devices:
-            dict_devices[dispositive] = 1
-        else:
-            cont = int(dict_devices[dispositive])
-            dict_devices[dispositive] = cont + 1
-
-        #insert all devices into dict_devicesByCriteria according to the classification criteria.
-        if selection_criteria not in dict_devicesByCriteria:
-            dict_devicesByCriteria[selection_criteria]= {}
-            if dispositive not in dict_devicesByCriteria[selection_criteria]:
-                dict_devicesByCriteria[selection_criteria][dispositive] = 1
-            else:
-                cont = int(dict_devicesByCriteria[selection_criteria][dispositive])
-                dict_devicesByCriteria[selection_criteria][dispositive] = cont + 1
-        elif dispositive not in dict_devicesByCriteria[selection_criteria]:
-            dict_devicesByCriteria[selection_criteria][dispositive] = 1
-        else:
-            cont = int(dict_devicesByCriteria[selection_criteria][dispositive])
-            dict_devicesByCriteria[selection_criteria][dispositive] = cont + 1
 
 def CleanVariable(benchmark):
     for character in characters_to_remove:
         benchmark = benchmark.replace(character, "")
     return benchmark
 
+def ExtractStatus(status, comments, selection_criteria):
+    global duplicated
+    global accepted
+    global rejected
+
+    if status == "Duplicated":
+        duplicated += 1
+    elif status == "Accepted":
+        accepted += 1
+        ExtractComments(comments, title, selection_criteria)
+        ExtractSelectioCriteria(selection_criteria)
+    elif status == "Rejected":
+        rejected += 1
+def printStatus():
+    global duplicated
+    global accepted
+    global rejected
+
+    labels = ['Reject', 'Accepted', 'Duplicated']
+    qtdLabels = [rejected, accepted, duplicated]
+
+    explode = (0, 0.1, 0.05)  # only "explode" the 2nd slice (i.e. 'Hogs')
+    colors = ['red', 'green', 'yellow']
+    fig1, ax1 = plt.subplots()
+    ax1.pie(qtdLabels, labels=labels, explode=explode, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors)
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+    plt.show()
 
 
-def InsertHeadAndTailBenchmark(head, tails):
+def ExtractBenchmark(benchmarks):
+    head = ""
+    tail = ""
+    word = ""
+    j = -1
+    benchmarks = benchmarks.upper()
+    if "(" in benchmarks: #devo fazer o tratamento com o parenteses
+        for i, letter in enumerate(benchmarks):  #benchmarks tem tudo 'LINUX(WC&GREP)&APP(SPHINX-3)&SPECIFIC]' 'twitter&kron28&LINUX(WC&GREP)&kron30&kron32&wdc'
+            if letter != "(" and letter != "&" and i > j:
+                word = word + letter  #word vai ser ou um head de um benchmark ou benchmark
+            elif letter == "(": #extract the tails
+                head = word
+                word = ""
+                j = i + 1
+                while benchmarks[j] != ")": #trick to extract the tail
+                    letter2 = benchmarks[j]
+                    tail = tail+letter2
+                    j += 1
+                letter2 = ""
+                tails = tail.split('&')
+                tail = ""
+                head = CleanVariable(head)
+                for i, subtail in enumerate(tails): #clean the vector of tails
+                    subtail = CleanVariable(subtail)
+                    tails[i] = subtail
+                CreateInsertHeadAndTailBenchmark(head, tails)
+
+            elif letter == "&" and word != "": #'ING&SFS&TPCH&GLIMPSEINDEX&CLAMAV&OLTP(TPC-C)&TAR&UNTAR]'
+                word = CleanVariable(word)
+                CreateInsertOnlyHeadBenchmark(word) #apos inserir um benchmark preciso zerar a variavel
+                word =""
+        if word != None and word!= "]": #this case is when there are a las benchmark
+            word = CleanVariable(word)
+            CreateInsertOnlyHeadBenchmark(word)
+
+    else: # There is no tail in this benchmark, add it imediatelly.
+        benchmarks = benchmarks.split('&')
+        for i, bench in enumerate(benchmarks):
+            bench = CleanVariable(bench)
+            benchmarks[i] = bench
+        #benchmarks = CleanVariables(benchmarks, tail) #in this case, chamaleon returns an array of benchmarks
+        for benchmark in benchmarks:
+            CreateInsertOnlyHeadBenchmark(benchmark)
+def CreateInsertHeadAndTailBenchmark(head, tails):
     if head not in dict_benchmarks.keys(): #adiciono HEAD com 1 ocorrencia, adiciono seus tais com 1 ocorrencia
         first = {1:{}}
         dict_benchmarks[head] = first
@@ -129,9 +170,7 @@ def InsertHeadAndTailBenchmark(head, tails):
                 #atualiza com benchs e occurrence
                 dict_new = {occurrence:benchs}
                 dict_benchmarks[head] = dict_new
-
-
-def InsertOnlyHeadBenchmark(benchmark): #this function receives an unique benchmak to be appened to the dictionary
+def CreateInsertOnlyHeadBenchmark(benchmark): #this function receives an unique benchmak to be appened to the dictionary
     if benchmark not in dict_benchmarks.keys(): #se o benchmark não está nas chaves eu somente insiro
         dict_benchmarks[benchmark]= {}
         dict_benchmarks[benchmark][1]={}
@@ -143,54 +182,27 @@ def InsertOnlyHeadBenchmark(benchmark): #this function receives an unique benchm
             occurrence += 1
             dict_new = {occurrence:benchs}
             dict_benchmarks[benchmark]=dict_new
+def printBenchmarksChart():
+    plt.rcParams.update({'font.size': 8.0})
+    benchname = []
+    benchvalue= []
+    for key, value in dict_benchmarks.items():
+        for item in sorted(value):
+            if item > 3 and item != 162:
+                benchvalue.append(item)
+                benchname.append(key)
 
+    y_pos = np.arange(len(benchname))
+    plt.bar(y_pos, benchvalue, align='center', alpha=0.5)
+    plt.xticks(y_pos, benchname, rotation=85, ha='center',size=7)
+    for i, v in enumerate(benchvalue):
+        plt.text(i, v, str(v), color='red', size=8, ha='center')
+    plt.xlabel('Workload', fontsize=10)
+    plt.ylabel('Occurence Number')
+    plt.title('Programming language usage')
+    plt.tight_layout()
 
-
-def ExtractBenchmark(benchmarks,title):
-    head = ""
-    tail = ""
-    word = ""
-    j = -1
-    benchmarks = benchmarks.upper()
-    if "(" in benchmarks: #devo fazer o tratamento com o parenteses
-        for i, letter in enumerate(benchmarks):  #benchmarks tem tudo 'LINUX(WC&GREP)&APP(SPHINX-3)&SPECIFIC]' 'twitter&kron28&LINUX(WC&GREP)&kron30&kron32&wdc'
-            if letter != "(" and letter != "&" and i > j:
-                word = word + letter  #word vai ser ou um head de um benchmark ou benchmark
-            elif letter == "(": #extract the tails
-                head = word
-                word = ""
-                j = i + 1
-                while benchmarks[j] != ")": #trick to extract the tail
-                    letter2 = benchmarks[j]
-                    tail = tail+letter2
-                    j += 1
-                letter2 = ""
-                tails = tail.split('&')
-                tail = ""
-                head = CleanVariable(head)
-                for i, subtail in enumerate(tails): #clean the vector of tails
-                    subtail = CleanVariable(subtail)
-                    tails[i] = subtail
-                InsertHeadAndTailBenchmark(head, tails)
-
-            elif letter == "&" and word != "": #'ING&SFS&TPCH&GLIMPSEINDEX&CLAMAV&OLTP(TPC-C)&TAR&UNTAR]'
-                word = CleanVariable(word)
-                InsertOnlyHeadBenchmark(word) #apos inserir um benchmark preciso zerar a variavel
-                word =""
-        if word != None and word!= "]": #this case is when there are a las benchmark
-            word = CleanVariable(word)
-            InsertOnlyHeadBenchmark(word)
-
-    else: # There is no tail in this benchmark, add it imediatelly.
-        benchmarks = benchmarks.split('&')
-        for i, bench in enumerate(benchmarks):
-            bench = CleanVariable(bench)
-            benchmarks[i] = bench
-        #benchmarks = CleanVariables(benchmarks, tail) #in this case, chamaleon returns an array of benchmarks
-        for benchmark in benchmarks:
-            InsertOnlyHeadBenchmark(benchmark)
-
-
+    plt.show()
 
 
 def ExtractANDCreateDict_Power(power,selection_criteria):
@@ -209,7 +221,6 @@ def ExtractANDCreateDict_Power(power,selection_criteria):
     elif "N" in power:
         cont = dict_powerByCriteria[selection_criteria]["N"]
         dict_powerByCriteria[selection_criteria]["N"] = cont + 1
-
 def printPowerChart():
     labelYesNo = []
     for key, value in dict_power.items():
@@ -228,8 +239,6 @@ def printPowerChart():
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
 
     plt.show()
-
-
 def printPowerChartByCriteria(): # {'S2SS-IO -Soft-2-improve-IO-on-Storage-Systems': {'Y': 12, 'N': 197}, 'H2H-IO -Hard-2-improve-IO-on-Hardware': {'Y': 10, 'N': 2}, 'S2H-IO -Soft-2-improve-IO-on-Hardware': {'Y': 10, 'N': 106}, 'ARCHITECTURE': {'Y': 11, 'N': 71}, 'S2S-IO -Soft-2-improve-IO-on-Software': {'Y': 5, 'N': 102}, 'H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems': {'Y': 1, 'N': 15}, 'H2S-IO -Hard-2-improve-IO-on-Software': {'Y': 1, 'N': 8}}
     print("!FAZER FUNçÂAAOOOO")
     labels = []
@@ -344,15 +353,6 @@ def printPowerChartByCriteria(): # {'S2SS-IO -Soft-2-improve-IO-on-Storage-Syste
             labels.append("H2S-IO")
             colors.append("olive")
 
-
-
-
-
-
-
-
-            #colors=['green','red','yellow','lightgreen','olive','salmon','tomato'],
-            #labels=['H2SS-IO','S2SS-IO','Architecture', 'H2H-IO', 'H2S-IO', 'S2S-IO', 'S2H-IO'],
     plt.pie([1,1,1,1,1,1,1], radius=1,
             colors=colors,
             labels=labels,
@@ -378,10 +378,10 @@ def ExtractImprovedObject(improvedObject,selection_criteria):
     elif selection_criteria == "H2S-IO -Hard-2-improve-IO-on-Software":
         #[Determine the Hardware Choice(DRAM)]-[File System(HDFS)]-[DRAM]
         print("teste")
-        #ExtractH2HDevices(improvedObject)
+        ExtractDict_H2S_improvedObject(improvedObject)
     elif selection_criteria == "H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems":
         #[DMA cache technique (DDC)]-[Storage System[FPGA Emulation Platform]]-[Memory&cache]
-        #ExtractH2HDevices(improvedObject)
+        ExtractDict_H2SS_improvedObject(improvedObject)
         print("teste")
     elif selection_criteria == "S2S-IO -Soft-2-improve-IO-on-Software":
         #[non-blocking API extensions]-[Memcached[Libmemcached APIs]]-[SSD&Memory]
@@ -407,8 +407,6 @@ def CreateDict_H2H_improvedObject(improvedObject):
     else:
         val = dict_H2H_improvedObject[improvedObject]
         dict_H2H_ReachedObject[improvedObject] = val + 1
-
-
 def print_H2H_ReachedObject():
     labels = []
     qtdLabels = []
@@ -424,30 +422,257 @@ def print_H2H_ReachedObject():
 
     plt.show()
 
+def ExtractDict_H2S_improvedObject(improvedObject): #[File System(HDFS)]
+    print(improvedObject)
+    word = ""
+    especifiedObj = ""
+    letter2 =""
+    j = -1
+    object = improvedObject.upper()
+    #if "(" in object:  # devo fazer o tratamento com o parenteses
+    for i, letter in enumerate(object):
+        if letter != "(" and letter != "&" and i > j:
+            word = word + letter  # word vai ser ou um head de um benchmark ou benchmark
+        elif letter == "(":  # extract the tails
+            improvedObjclass = word
+            word = ""
+            j = i + 1
+            while object[j] != ")":  # trick to extract the tail
+                letter2 = object[j]
+                especifiedObj = especifiedObj + letter2
+                j += 1
+            letter2 = ""
+            especifiedObjs = especifiedObj.split('&')
+            especifiedObj = ""
+            improvedObjclass = CleanVariable(improvedObjclass)
+            for i, subespecifiedObj in enumerate(especifiedObjs):  # clean the vector of tails
+                subespecifiedObj = CleanVariable(subespecifiedObj)
+                especifiedObjs[i] = subespecifiedObj
+            CreateDict_H2S_improvedObject(improvedObjclass, especifiedObjs)
+def CreateDict_H2S_improvedObject(improvedObjclass, especifiedObjs):
+    if improvedObjclass not in dict_H2S_ReachedObject.keys(): #adiciono HEAD com 1 ocorrencia, adiciono seus tais com 1 ocorrencia
+        first = {1:{}}
+        dict_H2S_ReachedObject[improvedObjclass] = first
+        for obj in especifiedObjs:
+            for occurrence,benchs in dict_H2S_ReachedObject[improvedObjclass].items():
+                if obj not in benchs.keys():  # insert an new elemento into the subs
+                    aux = {obj:1}
+                    benchs.update(aux) #adiciona o head para adicionar os Keys
+    else: # atualizo o valor do head, verifico se existe o tail, se existir atualizo valor do TAIL, se não existir, insiro o TAIL com ocorrencia = 1
+        dict_old = dict_H2S_ReachedObject[improvedObjclass]
+        dict_new = {}
+        for occurrence, benchs in dict_old.items():
+            occurrence += 1
+            for obj in especifiedObjs:
+                if obj not in benchs.keys():  # insert an new elemento into the subs
+                    aux = {obj: 1}
+                    benchs.update(aux)
+                else:
+                    for occurrenceSub, bench in benchs.items():
+                        if occurrenceSub == obj:
+                            bench += 1
+                            aux2={occurrenceSub:bench}
+                            benchs.update(aux2)
+
+                #atualiza com benchs e occurrence
+                dict_new = {occurrence:benchs}
+                dict_H2S_ReachedObject[improvedObjclass] = dict_new
+def print_H2S_ReachedObject():
+    improvedObjClassName =[]
+    improvedClassQtd =[]
+    improvedSpecificObjName = []
+    improvedSpecificObjQtd = []
 
 
-def printBenchmarksChart():
-    plt.rcParams.update({'font.size': 8.0})
-    benchname = []
-    benchvalue= []
-    for key, value in dict_benchmarks.items():
-        for item in sorted(value):
-            if item > 3 and item != 162:
-                benchvalue.append(item)
-                benchname.append(key)
+    print(dict_H2S_ReachedObject)
 
-    y_pos = np.arange(len(benchname))
-    plt.bar(y_pos, benchvalue, align='center', alpha=0.5)
-    plt.xticks(y_pos, benchname, rotation=85, ha='center',size=7)
-    for i, v in enumerate(benchvalue):
-        plt.text(i, v, str(v), color='red', size=8, ha='center')
-    plt.xlabel('Workload', fontsize=10)
-    plt.ylabel('Occurence Number')
-    plt.title('Programming language usage')
-    plt.tight_layout()
+    for improvedObjclass, especifiedObjs in dict_H2S_ReachedObject.items():
+        improvedObjClassName.append(improvedObjclass)
+        for classQtd, especifiedObjsSub in especifiedObjs.items():
+            improvedClassQtd.append(classQtd)
+            for specificObj, qtdEspecificObj in especifiedObjsSub.items():
+                improvedSpecificObjName.append(specificObj)
+                improvedSpecificObjQtd.append(qtdEspecificObj)
 
+    percentObjClass = []
+    percentObjSpecific = []
+    total = 0
+
+    #Calculate Obj Class Percentage
+    for x in improvedClassQtd:
+        total += int(x)
+    for val in improvedClassQtd:
+        percentage = (val * 100) / total
+        percentObjClass.append(round(percentage, 1))
+
+    # {'DATABASE': {1: {'IBM SOLIDDB': 1}}, 'IN-MEMORY KEY-VALUE STORE': {1: {'MEMCACHE': 1}}, 'APPLICATION': {1: {'GENOME SEARCH': 1}},
+    # 'FRAMEWORK': {2: {'SPARK': 1, 'HADOOP MAPREDUCE': 1}}, 'FILE SYSTEM': {2: {'HDFS': 2}}}
+    # ['DATABASE', 'IN-MEMORY KEY-VALUE STORE', 'APPLICATION', 'FRAMEWORK', 'FILE SYSTEM']   #improvedObjClassName
+ # i  [1, 1, 1, 2, 2] quantidade de vezes que apareceu a aplicação.                          #improvedClassQtd
+    # ['IBM SOLIDDB', 'MEMCACHE', 'GENOME SEARCH', 'SPARK', 'HADOOP MAPREDUCE', 'HDFS']      #improvedSpecificObjName
+ # j  [1, 1, 1, 1, 1, 2]                                                                     #improvedSpecificObjQtd
+
+    cont = 0
+    item = 1
+    for i, j in zip(improvedClassQtd, improvedSpecificObjQtd):  # o tamanho de J deve ser sempre igual ao tamanho de i
+        if i > j:  # tem dois databases diferentes
+            #calcula variavel cont que conterá a quantidade de valores do vetor improvedSpecificObjQtd  que correspondem ao vetor improvedClassQtd
+            while i >= j:
+                cont += 1
+                j += 1
+            addpercent = 1 / cont #adicione a quantidade de Cont com o valor ADDPERCENT
+            while item <= cont:
+                percentObjSpecific.append(addpercent)
+                item+=1
+        elif i == j:  # um elemento correspondente de cada vetor
+            print("relação de 1 pra 1, a porcentagem eh 100%, não preciso calcular")
+            percentObjSpecific.append(1)
+
+
+
+    plt.pie(improvedClassQtd, radius=1, labels=improvedObjClassName, pctdistance=0.85, shadow=True, autopct='%.2f%%',
+            wedgeprops=dict(width=0.3, edgecolor='white'),startangle=40)
+
+    plt.pie(improvedSpecificObjQtd, radius=0.7, labels=improvedSpecificObjName, wedgeprops=dict(width=0.3, edgecolor='white'),
+             pctdistance=0.9, labeldistance=0.6, shadow=True,startangle=40, textprops = dict(rotation_mode = 'anchor', va='center', ha='left'))
+    #plt.legend(bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 15},bbox_transform=plt.gcf().transFigure, title="Power Concerning")
+    plt.axis('equal')
+    plt.title('Improved Software Class by Hardware')
     plt.show()
 
+
+def ExtractDict_H2SS_improvedObject(improvedObject): #[File System(HDFS)]
+    # improved place/implanted place/evaluated environment
+    #Storage Systems[Storage System][rsee(1s)]   ----   Storage System[Storage System][rsee(1c16n)]
+    print(improvedObject, title)
+    word = ""
+    environmentType =''
+    letter2 =""
+    j = -1
+    object = improvedObject.upper()
+    object = object.split('[')
+    improvedGeneralObjClass=object[0]
+    improvedSpecificObjPlace=object[1]
+    improvedObjEnv=object[2]
+    #Extracting environment Class (RSEE) and EnvironmentType (1S)
+    for i, letter in enumerate(improvedObjEnv):
+        if letter != "(" and letter != "&" and i > j:
+            word = word + letter  # word vai ser ou um head de um benchmark ou benchmark
+        elif letter == "(":  # extract the tails
+            environmentClass = word
+            word = ""
+            j = i + 1
+            while improvedObjEnv[j] != ")":  # trick to extract the tail
+                letter2 = improvedObjEnv[j]
+                environmentType = environmentType + letter2
+                j += 1
+            letter2 = ""
+            CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjPlace, environmentClass, environmentType)
+def CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjPlace, environmentClass, environmentType):
+    global dict_H2SS_ReachedObject
+    print(improvedGeneralObjClass, improvedSpecificObjPlace, environmentClass, environmentType)
+
+    #GENERALOBJCLASS :{STORAGE SYSTEM:1},
+    #SPECIFICOBJCLASS: {STORAGE SYSTEM: 1, XXXSSS: 1},
+    #ENVIRONMENTCLASS :{RSEE:1, RHEE:1, SSEE:1}
+    #ENVIRONMENTYPE: {1pc: 1, 1c: 1, 1s: 1}
+
+    print(dict_H2SS_ReachedObject)
+
+    if "GENERALOBJCLASS" not in dict_H2SS_ReachedObject.keys():
+        first = {}
+        dict_H2SS_ReachedObject["GENERALOBJCLASS"] = first
+    subdict = dict_H2SS_ReachedObject["GENERALOBJCLASS"]
+    if improvedGeneralObjClass not in subdict.keys():
+        val ={improvedGeneralObjClass: 1}
+        subdict.update(val)
+    else:
+        del dict_H2SS_ReachedObject["GENERALOBJCLASS"]
+        for key, value in subdict.items():
+            if key == improvedGeneralObjClass:
+                val = value
+                val += 1
+                dict_H2SS_ReachedObject["GENERALOBJCLASS"] = {}
+                obj = {improvedGeneralObjClass: val}
+                subdict.update(obj)
+                dict_H2SS_ReachedObject["GENERALOBJCLASS"] = subdict
+
+    print(dict_H2SS_ReachedObject)
+
+    if "SPECIFICOBJCLASS" not in dict_H2SS_ReachedObject.keys():
+        first = {}
+        dict_H2SS_ReachedObject["SPECIFICOBJCLASS"] = first
+    subdict = dict_H2SS_ReachedObject["SPECIFICOBJCLASS"]
+    if improvedSpecificObjPlace not in subdict.keys():
+        val = {improvedSpecificObjPlace: 1}
+        subdict.update(val)
+    else:
+        del dict_H2SS_ReachedObject["SPECIFICOBJCLASS"]
+        for key, value in subdict.items():
+            if key == improvedSpecificObjPlace:
+                val = value
+                val += 1
+                dict_H2SS_ReachedObject["SPECIFICOBJCLASS"] = {}
+                obj = {improvedSpecificObjPlace: val}
+                subdict.update(obj)
+                dict_H2SS_ReachedObject["SPECIFICOBJCLASS"] = subdict
+
+    print(dict_H2SS_ReachedObject)
+
+    if "ENVIRONMENTCLASS" not in dict_H2SS_ReachedObject.keys():
+        first = {}
+        dict_H2SS_ReachedObject["ENVIRONMENTCLASS"] = first
+    subdict = dict_H2SS_ReachedObject["ENVIRONMENTCLASS"]
+    if environmentClass not in subdict.keys():
+        val = {environmentClass: 1}
+        subdict.update(val)
+    else:
+        del dict_H2SS_ReachedObject["ENVIRONMENTCLASS"]
+        for key, value in subdict.items():
+            if key == environmentClass:
+                val = value
+                val += 1
+                dict_H2SS_ReachedObject["ENVIRONMENTCLASS"] = {}
+                obj = {environmentClass: val}
+                subdict.update(obj)
+                dict_H2SS_ReachedObject["ENVIRONMENTCLASS"] = subdict
+
+
+
+    print(dict_H2SS_ReachedObject)
+
+    if "ENVIRONMENTYPE" not in dict_H2SS_ReachedObject.keys():
+        first = {}
+        dict_H2SS_ReachedObject["ENVIRONMENTYPE"] = first
+    subdict = dict_H2SS_ReachedObject["ENVIRONMENTYPE"]
+    if environmentType not in subdict.keys():
+        val = {environmentType: 1}
+        subdict.update(val)
+    else:
+        del dict_H2SS_ReachedObject["ENVIRONMENTYPE"]
+        for key, value in subdict.items():
+            if key == environmentType:
+                val = value
+                val += 1
+                dict_H2SS_ReachedObject["ENVIRONMENTYPE"] = {}
+                obj = {environmentType: val}
+                subdict.update(obj)
+                dict_H2SS_ReachedObject["ENVIRONMENTYPE"] = subdict
+
+
+def printDict_H2SS_improvedObject():
+    print(dict_H2SS_ReachedObject)
+    # {'SPECIFICOBJCLASS': {'PXA255]': 1, 'STORAGE SYSTEM]': 7, 'FPGA EMULATION PLATFORM]': 1, 'EXYNOS 5420 BOARD]': 1}, 'ENVIRONMENTCLASS': {'SSEE': 3, 'RSEE': 7},
+    # 'ENVIRONMENTYPE': {'1S': 2, 'SP': 1, 'DRAMSIM2': 1, 'NF': 1, 'PXA255': 1, '1C16N': 1, 'PCM SIMULATOR': 1, '1PC': 2}, 'GENERALOBJCLASS': {'STORAGE SYSTEMS': 10}}
+
+
+
+def ExtractSelectioCriteria(selection_criteria):
+    if selection_criteria not in dict_selectionCriteria:
+        dict_selectionCriteria[selection_criteria] = 1
+    else:
+        val = dict_selectionCriteria[selection_criteria]
+        dict_selectionCriteria[selection_criteria] = val + 1
 def printSelectioCriteria():
     plt.rcParams.update({'font.size': 8.0})
     Criterianame = []
@@ -509,11 +734,47 @@ def printSelectioCriteria():
     plt.tight_layout()
     plt.show()
 
+
+
+def ExtractDevice(devices,selection_criteria):
+    device = devices.split('&')
+    for dispositive in device:
+        dispositive = dispositive.upper()
+        if dispositive == "DRAM" or dispositive == "RAM" or dispositive == "MEMORY" or dispositive == "DRAM(WIDEIO2)" or dispositive == "DRAM(LPDDR4)":
+            dispositive = "DRAM"
+        if "M.2" in dispositive or dispositive == "M.2(NVME)" or dispositive == "M.2(SSD)":
+            dispositive = "M.2"
+        if  dispositive == "PCM" or dispositive == "PRAM" or dispositive == "PCME" or dispositive == "PCRAM" or dispositive == "OUM":
+            dispositive = "PCM"
+        if  dispositive == "FERAM" or dispositive == "F-RAM" or dispositive == "FRAM":
+            dispositive = "FERAM"
+        if  dispositive == "FLASH" or dispositive == "NAND FLASH" or dispositive == "NAND":
+            dispositive = "FLASH"
+
+        #insert all devices into dict_devices dictionary
+        if dispositive not in dict_devices:
+            dict_devices[dispositive] = 1
+        else:
+            cont = int(dict_devices[dispositive])
+            dict_devices[dispositive] = cont + 1
+
+        #insert all devices into dict_devicesByCriteria according to the classification criteria.
+        if selection_criteria not in dict_devicesByCriteria:
+            dict_devicesByCriteria[selection_criteria]= {}
+            if dispositive not in dict_devicesByCriteria[selection_criteria]:
+                dict_devicesByCriteria[selection_criteria][dispositive] = 1
+            else:
+                cont = int(dict_devicesByCriteria[selection_criteria][dispositive])
+                dict_devicesByCriteria[selection_criteria][dispositive] = cont + 1
+        elif dispositive not in dict_devicesByCriteria[selection_criteria]:
+            dict_devicesByCriteria[selection_criteria][dispositive] = 1
+        else:
+            cont = int(dict_devicesByCriteria[selection_criteria][dispositive])
+            dict_devicesByCriteria[selection_criteria][dispositive] = cont + 1
 def printDevicesChart():
     explode = (0.01, 0.025, 0.015, 0.02, 0.03, 0.04, 0.05, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.015)
     title = "Most Used Devices"
     CreateDevicesChartByCriteria(dict_devices, title, explode)
-
 def printDevicesChartByCriteria():
     explode = None
     for criteria, value in dict_devicesByCriteria.items():
@@ -538,7 +799,6 @@ def printDevicesChartByCriteria():
         elif criteria == "ARCHITECTURE":
             title  = "ARCH"
             CreateDevicesChartByCriteria(value, title, explode)
-
 def CreateDevicesChartByCriteria(dict_devices,title,explode):
     devices = []
     qtdDevices = []
@@ -664,21 +924,7 @@ def CreateDevicesChartByCriteria(dict_devices,title,explode):
         plt.show()
 
 
-def printStatus():
-    global duplicated
-    global accepted
-    global rejected
 
-    labels = ['Reject', 'Accepted', 'Duplicated']
-    qtdLabels = [rejected, accepted, duplicated]
-
-    explode = (0, 0.1, 0.05)  # only "explode" the 2nd slice (i.e. 'Hogs')
-    colors = ['red', 'green', 'yellow']
-    fig1, ax1 = plt.subplots()
-    ax1.pie(qtdLabels, labels=labels, explode=explode, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors)
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-
-    plt.show()
 
 def ExtractComments(comment, title, selection_criteria):
     comment = comment.replace("]\n[", "]-[");
@@ -698,31 +944,8 @@ def ExtractComments(comment, title, selection_criteria):
         ExtractANDCreateDict_Power(power,selection_criteria)
         #print(power)
         benchmarks = line[5]
-        ExtractBenchmark(benchmarks,title)
+        ExtractBenchmark(benchmarks)
         #print("proxima linha \n")
-
-
-def ExtractSelectioCriteria(selection_criteria):
-    if selection_criteria not in dict_selectionCriteria:
-        dict_selectionCriteria[selection_criteria] = 1
-    else:
-        val = dict_selectionCriteria[selection_criteria]
-        dict_selectionCriteria[selection_criteria] = val + 1
-
-def ExtractStatus(status, comments, selection_criteria):
-    global duplicated
-    global accepted
-    global rejected
-
-    if status == "Duplicated":
-        duplicated += 1
-    elif status == "Accepted":
-        accepted += 1
-        ExtractComments(comments, title, selection_criteria)
-        ExtractSelectioCriteria(selection_criteria)
-    elif status == "Rejected":
-        rejected += 1
-
 
 
 
@@ -737,7 +960,10 @@ def menu():
 6 - printBenchmarksChart()
 7 - printSelectioCriteria()
 8 - print_H2H_ReachedObject()
-9 - 
+9 - print_H2S_ReachedObject()
+10 -ExtractDict_H2SS_improvedObject
+11 - print(dict_H2SS_ReachedObject)
+12 - 
 0 - Para voltar ao menu
 Escolha: \n''' ))
 
@@ -786,15 +1012,22 @@ Escolha: \n''' ))
         pass
     elif escolha == 9:
         print("FAZER")
+        print_H2S_ReachedObject()
         menu()
-
+        pass
+    elif escolha == 10:
+        print(dict_H2H_ReachedObject.items())
+        print_H2H_ReachedObject()
+        menu()
+        pass
+    elif escolha == 11:
+        printDict_H2SS_improvedObject()
+        menu()
         pass
 
     elif escolha == 0:
         print("\nEND!")
         pass
-
-
 for f in filenames:
     path = "/home/laercio/github/ReadingParsifal/" + f
 
