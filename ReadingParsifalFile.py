@@ -7,6 +7,9 @@ import plotly.io as pio
 import plotly
 import pandas as pd
 import math
+import seaborn as sb
+import re
+
 
 #bibtex_key = row[0]
 #title = row[1]
@@ -50,6 +53,10 @@ dict_powerByCriteria = {}
 dict_H2H_ReachedObject = {}
 dict_H2S_ReachedObject = {}
 dict_H2SS_ReachedObject = {}
+dict_S2S_ReachedImprovedObject = {}
+dict_S2S_ReachedImplementedObject = {}
+
+
 
 
 
@@ -61,7 +68,7 @@ papersToVerify = []
 duplicated = 0
 accepted = 0
 rejected = 0
-
+cont = 0
 
 
 def CleanVariable(benchmark):
@@ -372,33 +379,35 @@ def printPowerChartByCriteria(): # {'S2SS-IO -Soft-2-improve-IO-on-Storage-Syste
 
 
 def ExtractImprovedObject(improvedObject,selection_criteria):
+    global cont
     if selection_criteria == "H2H-IO -Hard-2-improve-IO-on-Hardware":
         #[on-chip access control memory-STT-RAM- (ACM)SSD(FeSSD)]-[SSD[DiskSim]]-[SSD&STT-RAM]
         CreateDict_H2H_improvedObject(improvedObject)
     elif selection_criteria == "H2S-IO -Hard-2-improve-IO-on-Software":
         #[Determine the Hardware Choice(DRAM)]-[File System(HDFS)]-[DRAM]
-        print("teste")
+        #print("teste")
         ExtractDict_H2S_improvedObject(improvedObject)
     elif selection_criteria == "H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems":
         #[DMA cache technique (DDC)]-[Storage System[FPGA Emulation Platform]]-[Memory&cache]
         ExtractDict_H2SS_improvedObject(improvedObject)
-        print("teste")
+        #print("teste")
     elif selection_criteria == "S2S-IO -Soft-2-improve-IO-on-Software":
         #[non-blocking API extensions]-[Memcached[Libmemcached APIs]]-[SSD&Memory]
-        #ExtractH2HDevices(improvedObject)
-        print("teste")
+        cont +=1
+        ExtractS2SDevices(improvedObject)
+        #print("teste", cont)
     elif selection_criteria == "S2H-IO -Soft-2-improve-IO-on-Hardware":
         #[I/O link over-clocking]-[SSD[nf][rd(Altera Stratix IV GX FPGA PCle)]-[SSD]
         #ExtractH2HDevices(improvedObject)
-        print("teste")
+        print("xxxx")
     elif selection_criteria == "S2SS-IO -Soft-2-improve-IO-on-Storage-Systems":
         # [writeback scheme(DFW)]-[Stotrage System[File System(EXT3)][rsee(1m2d)]]-[HDD&SSD]
         #ExtractH2HDevices(improvedObject)
-        print("teste")
+        print("yyyyy")
     elif selection_criteria == "ARCHITECTURE":
         #[duplication-aware flash cache architecExtractH2HDevices(improvedObject)ture (DASH)]-[Cloud[rsee(1m)]]-[Flash&HDD]
         #ExtractH2HDevices(improvedObject)
-        print("teste")
+        print("zzzzz")
 
 
 def CreateDict_H2H_improvedObject(improvedObject):
@@ -567,17 +576,29 @@ def ExtractDict_H2SS_improvedObject(improvedObject): #[File System(HDFS)]
                 environmentType = environmentType + letter2
                 j += 1
             letter2 = ""
+            improvedGeneralObjClass=CleanVariable(improvedGeneralObjClass)
+            improvedSpecificObjPlace=CleanVariable(improvedSpecificObjPlace)
+            environmentClass=CleanVariable(environmentClass)
+            environmentType=CleanVariable(environmentType)
             CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjPlace, environmentClass, environmentType)
 def CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjPlace, environmentClass, environmentType):
     global dict_H2SS_ReachedObject
-    print(improvedGeneralObjClass, improvedSpecificObjPlace, environmentClass, environmentType)
-
     #GENERALOBJCLASS :{STORAGE SYSTEM:1},
     #SPECIFICOBJCLASS: {STORAGE SYSTEM: 1, XXXSSS: 1},
     #ENVIRONMENTCLASS :{RSEE:1, RHEE:1, SSEE:1}
     #ENVIRONMENTYPE: {1pc: 1, 1c: 1, 1s: 1}
 
-    print(dict_H2SS_ReachedObject)
+    #We insert one prefix into the environment type to plot the graphic according to these environment class
+    envPrefix= ""
+    if "RS" in environmentClass:
+        envPrefix = "rs"
+    elif "RH" in environmentClass:
+        envPrefix = "rh"
+    elif "SS" in environmentClass:
+        envPrefix = "ss"
+    environmentType = envPrefix+environmentType
+
+
 
     if "GENERALOBJCLASS" not in dict_H2SS_ReachedObject.keys():
         first = {}
@@ -597,7 +618,6 @@ def CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjP
                 subdict.update(obj)
                 dict_H2SS_ReachedObject["GENERALOBJCLASS"] = subdict
 
-    print(dict_H2SS_ReachedObject)
 
     if "SPECIFICOBJCLASS" not in dict_H2SS_ReachedObject.keys():
         first = {}
@@ -617,7 +637,6 @@ def CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjP
                 subdict.update(obj)
                 dict_H2SS_ReachedObject["SPECIFICOBJCLASS"] = subdict
 
-    print(dict_H2SS_ReachedObject)
 
     if "ENVIRONMENTCLASS" not in dict_H2SS_ReachedObject.keys():
         first = {}
@@ -638,9 +657,6 @@ def CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjP
                 dict_H2SS_ReachedObject["ENVIRONMENTCLASS"] = subdict
 
 
-
-    print(dict_H2SS_ReachedObject)
-
     if "ENVIRONMENTYPE" not in dict_H2SS_ReachedObject.keys():
         first = {}
         dict_H2SS_ReachedObject["ENVIRONMENTYPE"] = first
@@ -658,13 +674,338 @@ def CreateDict_H2SS_improvedObject(improvedGeneralObjClass, improvedSpecificObjP
                 obj = {environmentType: val}
                 subdict.update(obj)
                 dict_H2SS_ReachedObject["ENVIRONMENTYPE"] = subdict
-
-
 def printDict_H2SS_improvedObject():
-    print(dict_H2SS_ReachedObject)
-    # {'SPECIFICOBJCLASS': {'PXA255]': 1, 'STORAGE SYSTEM]': 7, 'FPGA EMULATION PLATFORM]': 1, 'EXYNOS 5420 BOARD]': 1}, 'ENVIRONMENTCLASS': {'SSEE': 3, 'RSEE': 7},
-    # 'ENVIRONMENTYPE': {'1S': 2, 'SP': 1, 'DRAMSIM2': 1, 'NF': 1, 'PXA255': 1, '1C16N': 1, 'PCM SIMULATOR': 1, '1PC': 2}, 'GENERALOBJCLASS': {'STORAGE SYSTEMS': 10}}
+    # 'GENERALOBJCLASS': {'STORAGE SYSTEMS': 10}
+    # 'SPECIFICOBJCLASS': {'PXA255]': 1, 'STORAGE SYSTEM]': 7, 'FPGA EMULATION PLATFORM]': 1, 'EXYNOS 5420 BOARD]': 1},
+    # 'ENVIRONMENTCLASS': {'SSEE': 3, 'RSEE': 7},
+    # 'ENVIRONMENTYPE': {'1S': 2, 'SP': 1, 'DRAMSIM2': 1, 'NF': 1, 'PXA255': 1, '1C16N': 1, 'PCM SIMULATOR': 1, '1PC': 2},
 
+    objClass = []
+    objClassQtd = []
+    speObjClass =[]
+    speObjQtd = []
+    envClass = []
+    envClassQtd = []
+    envType =[]
+    envTypeQtd =[]
+
+
+
+    for key, value in dict_H2SS_ReachedObject.items():
+        if key == "GENERALOBJCLASS":
+            for objectClass, objectClassQtd in value.items():
+                objClass.append(objectClass)
+                objClassQtd.append(objectClassQtd)
+
+    for key, value in dict_H2SS_ReachedObject.items():
+        if key == "SPECIFICOBJCLASS":
+            for specificObjectClass, specificObjectQtd in value.items():
+                speObjClass.append(specificObjectClass)
+                speObjQtd.append(specificObjectQtd)
+
+    for key, value in dict_H2SS_ReachedObject.items():
+        if key == "ENVIRONMENTCLASS":
+            for environmentClass, environmentClassQtd in value.items():
+                envClass.append(environmentClass)
+                envClassQtd.append(environmentClassQtd)
+
+    for key, value in dict_H2SS_ReachedObject.items():
+        if key == "ENVIRONMENTYPE":
+            for environmentType, environmentTypeQtd in value.items():
+                envType.append(environmentType)
+                envTypeQtd.append(environmentTypeQtd)
+        #fazer a leitura letra a letra para inserir em um vetor os elementos que condizem com cada typo de ambiente
+
+    # GENERALOBJCLASS
+    labels = objClass
+    qtdLabels = objClassQtd
+
+    #explode = (0.2, 0.0)
+    colors = ['dodgerblue']
+    fig1, ax1 = plt.subplots()
+    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors,# explode=explode,
+            wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.show()
+
+
+    #ENVIRONMENTCLASS
+    labels2 = []
+    labels = envClass
+    if labels[0] == "RSEE":
+        labels2=["RSEE - Real Small Evaluated Environment","SSEE - Software Simulated Evaluated Environment"]
+        colors = ['green', 'red']
+    else:
+        labels2 == ["SSEE - Software Simulated Evaluated Environment", "RSEE - Real Small Evaluated Environment"]
+        colors = ['red', 'green']
+
+    qtdLabels = envClassQtd
+    explode = (0.2, 0.0)
+    fig1, ax1 = plt.subplots()
+    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors, explode=explode, wedgeprops=dict(width=0.5, edgecolor='white'))# explode=explode,
+    plt.legend(labels=labels2, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 8}, bbox_transform=plt.gcf().transFigure, title="Evaluated Environment")
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.show()
+
+
+
+    # SPECIFICOBJCLASS
+    labels = speObjClass
+    qtdLabels = speObjQtd
+    fig1, ax1 = plt.subplots()
+    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270, #colors=colors,# explode=explode,
+            wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.title('Evaluated Environment')
+    plt.show()
+
+
+    # ENVIRONMENTYPE
+    #labels = envType
+    colors = []
+    for env in labels:
+        if "rs" in env:
+            colors.append("green")
+        elif "ss" in env:
+            colors.append("red")
+    qtdLabels = envTypeQtd
+    labelsEvaluatedEnvironment = ["C - Cluster",
+                                  "N - Node",
+                                  "S - Server",
+                                  "PC - Personal Computer",
+                                  "D - Disk",
+                                  "Sd - Solid Disk",
+                                  "M - Machine",
+                                  "NF - Not Found",
+                                  "V - Virtual",
+                                  "FLM - Flash Memory",
+                                  "FD - Flash Disk",
+                                  "VM - Virtual Machine",
+                                  ]
+    plt.rcParams.update({'font.size': 6.0})
+    #y_pos = np.arange(len(envTypeQtd))
+    clrs = ['red' if ("ss" in x) else 'green' for x in envType]
+    sb.barplot(x=envType, y=envTypeQtd, palette=clrs)  # color=clrs)
+
+    colors = ["red", "green"]
+    plt.legend(labels=["SS - Software Simulated","RS - Real Small"], bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 8}, bbox_transform=plt.gcf().transFigure, title="Hardware Infrastructure")
+    plt.show()
+
+
+    '''
+    ---------------------------------------------------------------
+                    Bar Chart
+        plt.bar(y_pos, envTypeQtd, align='center', alpha=0.5)
+    plt.xticks(y_pos, envType, rotation=0, ha='center',size=7)
+    for i, v in enumerate(envTypeQtd):
+        plt.text(i, v, str(v), color='red', size=8, ha='center')
+    plt.xlabel('Workload', fontsize=10)
+    plt.ylabel('Occurence Number')
+    plt.title('Programming language usage')
+    plt.tight_layout()
+    --------------------------------------------------------------
+                    Pie Chart With Legend
+    labels = envType
+    colors = []
+    for env in labels:
+        if "rs" in env:
+            colors.append("green")
+        elif "ss" in env:
+            colors.append("red")
+    print(labels)
+    print(colors)
+
+    qtdLabels = envTypeQtd
+    labelsEvaluatedEnvironment=["C - Cluster",
+                                "N - Node",
+                                "S - Server",
+                                "PC - Personal Computer",
+                                "D - Disk",
+                                "Sd - Solid Disk",
+                                "M - Machine",
+                                "NF - Not Found",
+                                "V - Virtual",
+                                "FLM - Flash Memory",
+                                "FD - Flash Disk",
+                                "VM - Virtual Machine",
+                                ]
+    #colors = ['dodgerblue']
+    fig1, ax1 = plt.subplots()
+    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, colors=colors,startangle=270, wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,colors=colors,
+    plt.legend(labels=labelsEvaluatedEnvironment, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 8}, bbox_transform=plt.gcf().transFigure, title="Hardware Infrastructure")
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.title('Evaluated Environment Specification')
+    plt.show()
+    '''
+
+def ExtractS2SDevices(improvedObject):
+    object = improvedObject.upper()
+    object = re.split('[()]', object)
+
+    improvedGeneralObjClass = object[0]
+    improvedSpecificObjPlace = object[1]
+    implementedObj = object[2]
+
+    improvedGeneralObjClass = CleanVariable(improvedGeneralObjClass)
+    improvedSpecificObjPlace = CleanVariable(improvedSpecificObjPlace)
+    implementedObj = CleanVariable(implementedObj)
+
+    CreateDict_S2S_improvedObject(improvedGeneralObjClass,improvedSpecificObjPlace)
+    CreateDict_S2S_implementedObject(improvedGeneralObjClass, implementedObj)
+def CreateDict_S2S_improvedObject(improvedGeneralObjClass,improvedSpecificObjPlace):
+    #print("improvedGeneralObjClass ->", improvedGeneralObjClass, "\nimprovedSpecificObjPlace ->",improvedSpecificObjPlace,"\nimplementedObj ->",implementedObj)
+    #improvedGeneralObjClass -> FILE SYSTEM
+    #improvedSpecificObjPlace -> ORANGEFS
+    #implementedObj -> ORANGEFS
+
+    #Verifica se a classe de objeto está no dicionario
+    if improvedGeneralObjClass not in dict_S2S_ReachedImprovedObject.keys():
+        first = {}
+        dict_S2S_ReachedImprovedObject[improvedGeneralObjClass] = first
+
+    #faz BKP do VALUE do dicionario
+    subdict = dict_S2S_ReachedImprovedObject[improvedGeneralObjClass]
+    del dict_S2S_ReachedImprovedObject[improvedGeneralObjClass]
+
+    #Faz a inserção da mesma CLASSE de objeto acima, e adiciona um valor para ela.
+    if improvedGeneralObjClass not in subdict.keys():
+        aux1 ={improvedGeneralObjClass: 1}
+        subdict.update(aux1)
+        print(subdict)
+    else:
+        val1 = subdict[improvedGeneralObjClass]
+        val1 += 1
+        obj = {improvedGeneralObjClass: val1}
+        subdict.update(obj)
+    # Faz a inserção da mesma SPECIFIC OBJECT de objeto acima, e adiciona um valor para ela.
+    if improvedSpecificObjPlace not in subdict.keys():
+        aux2 = {improvedSpecificObjPlace: 1}
+        subdict.update(aux2)
+        print(subdict)
+    else:
+        val2 = subdict[improvedSpecificObjPlace]
+        val2 += 1
+        obj = {improvedSpecificObjPlace: val2}
+        subdict.update(obj)
+
+    dict_S2S_ReachedImprovedObject[improvedGeneralObjClass] = {}
+    dict_S2S_ReachedImprovedObject[improvedGeneralObjClass] = subdict
+def CreateDict_S2S_implementedObject(improvedGeneralObjClass, implementedObj):
+    #print("improvedGeneralObjClass ->", improvedGeneralObjClass, "\nimprovedSpecificObjPlace ->",improvedSpecificObjPlace,"\nimplementedObj ->",implementedObj)
+    #improvedGeneralObjClass -> FILE SYSTEM
+    #improvedSpecificObjPlace -> ORANGEFS
+    #implementedObj -> ORANGEFS
+
+    #Verifica se a classe de objeto está no dicionario
+    if improvedGeneralObjClass not in dict_S2S_ReachedImplementedObject.keys():
+        first = {}
+        dict_S2S_ReachedImplementedObject[improvedGeneralObjClass] = first
+
+    #faz BKP do VALUE do dicionario
+    subdict = dict_S2S_ReachedImplementedObject[improvedGeneralObjClass]
+    del dict_S2S_ReachedImplementedObject[improvedGeneralObjClass]
+
+    #Faz a inserção da mesma CLASSE de objeto acima, e adiciona um valor para ela.
+    if improvedGeneralObjClass not in subdict.keys():
+        aux1 ={improvedGeneralObjClass: 1}
+        subdict.update(aux1)
+        print(subdict)
+    else:
+        val1 = subdict[improvedGeneralObjClass]
+        val1 += 1
+        obj = {improvedGeneralObjClass: val1}
+        subdict.update(obj)
+    # Faz a inserção da mesma SPECIFIC OBJECT de objeto acima, e adiciona um valor para ela.
+    if implementedObj not in subdict.keys():
+        aux2 = {implementedObj: 1}
+        subdict.update(aux2)
+        print(subdict)
+    else:
+        val2 = subdict[implementedObj]
+        val2 += 1
+        obj = {implementedObj: val2}
+        subdict.update(obj)
+
+    dict_S2S_ReachedImplementedObject[improvedGeneralObjClass] = {}
+    dict_S2S_ReachedImplementedObject[improvedGeneralObjClass] = subdict
+
+def printDict_S2S_improvedObject():
+    print(dict_S2S_ReachedImprovedObject)
+    print(dict_S2S_ReachedImplementedObject)
+
+#<class 'dict'>: {'OPERATIONAL SYSTEM': {'OPERATIONAL SYSTEM': 6, 'LINUX': 6}, 'FRAMEWORK': {'HADOOP': 2, 'FRAMEWORK': 6, 'FLAME-MR': 1, 'SPARK': 3}
+    improvedGeneralObjClass = []
+    improvedGeneralObjClassQtd = []
+    improvedSpecificObjPlace = []
+    improvedSpecificObjPlaceQtd = []
+
+#<class 'dict'>: {'FILE SYSTEM': {2: {'HDFS': 2}}, 'DATABASE': {2: {'NF': 1, 'IBM SOLIDDB': 1}}, 'APPLICATION': {1: {'GENOME SEARCH': 1}}, 'IN-MEMORY KEY-VALUE STORE': {1: {'MEMCACHE': 1}}, 'FRAMEWORK': {2: {'SPARK': 1, 'HADOOP MAPREDUCE': 1}}}
+    #improvedObjClassName = []
+    #improvedClassQtd = []
+    #improvedSpecificObjName = []
+    #improvedSpecificObjQtd = []
+
+    dict_teste = dict_S2S_ReachedImprovedObject
+
+    for impGeneralObjClass, especificObjs in dict_S2S_ReachedImprovedObject.items():
+        improvedGeneralObjClass.append(impGeneralObjClass)
+        for impGenObjCla, impGenObjClaQtd in especificObjs.items():
+            if impGenObjCla == impGeneralObjClass:
+                improvedGeneralObjClassQtd.append(impGenObjClaQtd)
+            else:
+                improvedSpecificObjPlace.append(impGenObjCla)
+                improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+
+    print("teste")
+    print("teste")
+
+
+    percentObjClass = []
+    percentObjSpecific = []
+    total = 0
+
+    # Calculate Obj Class Percentage
+    for x in improvedGeneralObjClassQtd:
+        total += int(x)
+    for val in improvedGeneralObjClassQtd:
+        percentage = (val * 100) / total
+        percentObjClass.append(round(percentage, 1))
+
+    # {'DATABASE': {1: {'IBM SOLIDDB': 1}}, 'IN-MEMORY KEY-VALUE STORE': {1: {'MEMCACHE': 1}}, 'APPLICATION': {1: {'GENOME SEARCH': 1}},
+    # 'FRAMEWORK': {2: {'SPARK': 1, 'HADOOP MAPREDUCE': 1}}, 'FILE SYSTEM': {2: {'HDFS': 2}}}
+    # ['DATABASE', 'IN-MEMORY KEY-VALUE STORE', 'APPLICATION', 'FRAMEWORK', 'FILE SYSTEM']   #improvedObjClassName
+    # i  [1, 1, 1, 2, 2] quantidade de vezes que apareceu a aplicação.                          #improvedClassQtd
+    # ['IBM SOLIDDB', 'MEMCACHE', 'GENOME SEARCH', 'SPARK', 'HADOOP MAPREDUCE', 'HDFS']      #improvedSpecificObjName
+    # j  [1, 1, 1, 1, 1, 2]                                                                     #improvedSpecificObjQtd
+
+    cont = 0
+    item = 1
+    for i, j in zip(improvedGeneralObjClassQtd, improvedSpecificObjPlaceQtd):  # o tamanho de J deve ser sempre igual ao tamanho de i
+        if i > j:  # tem dois databases diferentes
+            # calcula variavel cont que conterá a quantidade de valores do vetor improvedSpecificObjQtd  que correspondem ao vetor improvedClassQtd
+            while i >= j:
+                cont += 1
+                j += 1
+            addpercent = 1 / cont  # adicione a quantidade de Cont com o valor ADDPERCENT
+            while item <= cont:
+                percentObjSpecific.append(addpercent)
+                item += 1
+        elif i == j:  # um elemento correspondente de cada vetor
+            print("relação de 1 pra 1, a porcentagem eh 100%, não preciso calcular")
+            percentObjSpecific.append(1)
+
+    plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.85, shadow=True, autopct='%.2f%%', wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
+    plt.rcParams['font.size'] = 6
+
+    patches, texts = plt.pie(improvedSpecificObjPlaceQtd, radius=0.7, labels=improvedSpecificObjPlace,rotatelabels = 270, wedgeprops=dict(width=0.3, edgecolor='white'), pctdistance=0.9, labeldistance=0.8, shadow=True, startangle=180,
+            textprops=dict(rotation_mode='anchor', va='center', ha='left'))
+    for t in texts:
+        t.set_horizontalalignment('center')
+
+    plt.legend(bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 5},bbox_transform=plt.gcf().transFigure, title="Power Concerning")
+    plt.axis('equal')
+    plt.title('Improved Software Class by Hardware')
+    plt.show()
 
 
 def ExtractSelectioCriteria(selection_criteria):
@@ -961,9 +1302,9 @@ def menu():
 7 - printSelectioCriteria()
 8 - print_H2H_ReachedObject()
 9 - print_H2S_ReachedObject()
-10 -ExtractDict_H2SS_improvedObject
-11 - print(dict_H2SS_ReachedObject)
-12 - 
+10- printDict_H2SS_improvedObject()
+11- printDict_S2S_improvedObject()
+12- 
 0 - Para voltar ao menu
 Escolha: \n''' ))
 
@@ -975,53 +1316,44 @@ Escolha: \n''' ))
         menu()
         pass
     elif escolha == 2:
-        print(dict_power)
         printPowerChart()
         menu()
         pass
     elif escolha == 3:
-        print(dict_powerByCriteria)
         printPowerChartByCriteria()
         menu()
         pass
     elif escolha == 4:
-        print(dict_devices.items())
         printDevicesChart()
         menu()
         pass
     elif escolha == 5:
-        print(dict_devicesByCriteria.items())
         printDevicesChartByCriteria()
         menu()
         pass
     elif escolha == 6:
-
         printBenchmarksChart()
         menu()
         pass
     elif escolha == 7:
-
         printSelectioCriteria()
         menu()
-
         pass
     elif escolha == 8:
-        print(dict_H2H_ReachedObject.items())
         print_H2H_ReachedObject()
         menu()
         pass
     elif escolha == 9:
-        print("FAZER")
         print_H2S_ReachedObject()
         menu()
         pass
     elif escolha == 10:
-        print(dict_H2H_ReachedObject.items())
-        print_H2H_ReachedObject()
+        printDict_H2SS_improvedObject()
         menu()
         pass
     elif escolha == 11:
-        printDict_H2SS_improvedObject()
+        printDict_S2S_improvedObject()
+
         menu()
         pass
 
