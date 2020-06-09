@@ -10,6 +10,7 @@ import math
 import seaborn as sb
 import re
 import os
+import subprocess
 
 
 
@@ -64,12 +65,8 @@ dict_H2SS_ReachedObject = {}
 dict_S2S_ReachedImprovedObject = {}
 dict_S2S_ReachedImplementedObject = {}
 dict_S2H_ReachedImprovedObject = {}
-
-
-
-
-
-
+dict_S2SS_ReachedImprovedObject = {}
+dict_ARCH_improvedObject = {}
 
 
 characters_to_remove = "[]()&"
@@ -107,16 +104,20 @@ def printStatus():
     labels = ['Reject', 'Accepted', 'Duplicated']
     qtdLabels = [rejected, accepted, duplicated]
 
+    plt.rcParams.update({'font.size': 15.0})
     explode = (0, 0.1, 0.05)  # only "explode" the 2nd slice (i.e. 'Hogs')
     colors = ['red', 'green', 'yellow']
     fig1, ax1 = plt.subplots(figsize=(7, 7))
-    ax1.pie(qtdLabels, labels=labels, explode=explode, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors)
+    ax1.pie(qtdLabels, explode=explode, autopct='%1.1f%%', shadow=True, wedgeprops=dict(width=1.0, edgecolor='white'), startangle=270, colors=colors)
+    plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 12}, bbox_transform=plt.gcf().transFigure)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.title('Overall Papers Classification')
+    title = 'OverallPapersClassification'
+    plt.tight_layout()
+    var = "{}/01printStatus_" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/01printStatus", shell=True)
+    plt.savefig(var.format(results_dir+"/01printStatus"))
     plt.show()
-
-    fig1.savefig('{}/printStatus.png'.format(results_dir))
-
-    #plt.savefig(results_dir + sample_file_name)        fig1, ax1 = plt.subplots(figsize=(7, 7))
 
 def ExtractBenchmark(benchmarks):
     head = ""
@@ -207,23 +208,65 @@ def printBenchmarksChart():
     benchvalue= []
     for key, value in dict_benchmarks.items():
         for item in sorted(value):
-            if item > 3 and item != 162:
+            if item > 3 and item != 152:
                 benchvalue.append(item)
                 benchname.append(key)
 
+    plt.rcParams.update({'font.size': 12.0})
     y_pos = np.arange(len(benchname))
+    fig1, ax1 = plt.subplots(figsize=(10, 7))
     plt.bar(y_pos, benchvalue, align='center', alpha=0.5)
-    plt.xticks(y_pos, benchname, rotation=85, ha='center',size=7)
+    plt.xticks(y_pos, benchname, rotation=85, ha='center',size=10)
     for i, v in enumerate(benchvalue):
         plt.text(i, v, str(v), color='red', size=8, ha='center')
-    plt.xlabel('Workload', fontsize=10)
-    plt.ylabel('Occurence Number')
-    plt.title('Programming language usage')
     plt.tight_layout()
-
-    plt.savefig('{}/printBenchmarksChart.png'.format(results_dir))
+    plt.xlabel('Benchmarks and Traces')
+    plt.ylabel('Quantity')
+    plt.title('Benchmarks Occurrences')
+    title = 'BenchmarksOccurrences'
+    plt.tight_layout()
+    var = "{}/06printBenchmarksChart" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/06printBenchmarksChart", shell=True)
+    plt.savefig(var.format(results_dir + "/06printBenchmarksChart"))
     plt.show()
 
+
+    benchname = []
+    benchvalue = []
+    color = []
+
+    for mainBenchmark, subbenchmaks in dict_benchmarks.items():
+        for mainBenchmarkQtd, traces in subbenchmaks.items():
+            if mainBenchmarkQtd > 3 and mainBenchmarkQtd != 152:
+                benchvalue.append(mainBenchmarkQtd)
+                benchname.append(mainBenchmark)
+                color.append("red")
+                for key, value in traces.items():
+                    if value > 3:
+                        benchname.append(mainBenchmark+"_"+key)
+                        benchvalue.append(value)
+                        color.append("blue")
+
+
+    y_pos = np.arange(len(benchname))
+    fig1, ax1 = plt.subplots(figsize=(15, 10))
+    plt.bar(y_pos, benchvalue, align='center', alpha=0.5)
+    plt.xticks(y_pos, benchname, rotation=85, ha='center', size=10)
+    for i, v in enumerate(benchvalue):
+        plt.text(i, v, str(v), color='black', size=8, ha='center')
+
+    sb.barplot(x=benchname, y=benchvalue, palette=color, color=color)
+    plt.tight_layout()
+    ax1.xaxis.label.set_size(200)
+    plt.xlabel('Benchmarks and Traces', fontsize=10)
+    plt.ylabel('Quantity', fontsize=10)
+    plt.title('Benchmarks and Traces Occurrences')
+    title='BenchmarksAndTracesOccurrences'
+    plt.tight_layout()
+    var = "{}/06printBenchmarksChart" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/06printBenchmarksChart", shell=True)
+    plt.savefig(var.format(results_dir + "/06printBenchmarksChart"))
+    plt.show()
 
 def ExtractANDCreateDict_Power(power,selection_criteria):
     if "Y" in power:
@@ -251,14 +294,22 @@ def printPowerChart():
     labelYesNo.append(no)
     labelYesNo.append(yes)
 
-    labels = 'Without Energy\nEfficiency Consideration', 'With Energy\nEfficiency\nConsideration'
+    plt.rcParams.update({'font.size': 14.0})
+    labels = 'Does Not Consider Energy', 'Consider Energy'
     explode = (0.1, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
     colors = ['red', 'green']
-    fig1, ax1 = plt.subplots()
-    ax1.pie(labelYesNo, explode=explode, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors)
+    fig1, ax1 = plt.subplots(figsize=(7, 7))
+    ax1.pie(labelYesNo, explode=explode, autopct='%1.1f%%', shadow=True, wedgeprops=dict(width=1.0, edgecolor='white'), startangle=270, colors=colors)
+    plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 12}, bbox_transform=plt.gcf().transFigure, title="Power Concerning")
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    plt.savefig('{}/printPowerChart.png'.format(results_dir))
+    plt.title('Papers With Power Consideration')
+    title = 'PapersWithPowerConsideration'
+    plt.tight_layout()
+    var = "{}/02printPowerChart" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/02printPowerChart", shell=True)
+    plt.savefig(var.format(results_dir + "/02printPowerChart"))
     plt.show()
+
 def printPowerChartByCriteria(): # {'S2SS-IO -Soft-2-improve-IO-on-Storage-Systems': {'Y': 12, 'N': 197}, 'H2H-IO -Hard-2-improve-IO-on-Hardware': {'Y': 10, 'N': 2}, 'S2H-IO -Soft-2-improve-IO-on-Hardware': {'Y': 10, 'N': 106}, 'ARCHITECTURE': {'Y': 11, 'N': 71}, 'S2S-IO -Soft-2-improve-IO-on-Software': {'Y': 5, 'N': 102}, 'H2SS-IO -Hardw-2-improve-IO-on-Storage-Systems': {'Y': 1, 'N': 15}, 'H2S-IO -Hard-2-improve-IO-on-Software': {'Y': 1, 'N': 8}}
     labels = []
     colors =[]
@@ -340,8 +391,6 @@ def printPowerChartByCriteria(): # {'S2SS-IO -Soft-2-improve-IO-on-Storage-Syste
             labels.append("ARCHITECTURE")
             colors.append("yellow")
 
-
-
     for criteria, value in dict_powerByCriteria.items():
         if "H2H-IO" in criteria:
             for letter,val in value.items():
@@ -372,22 +421,27 @@ def printPowerChartByCriteria(): # {'S2SS-IO -Soft-2-improve-IO-on-Storage-Syste
             labels.append("H2S-IO")
             colors.append("olive")
 
+    plt.rcParams.update({'font.size': 11.0})
+    plt.subplots(figsize=(8, 8))
     plt.pie([1,1,1,1,1,1,1], radius=1,
             colors=colors,
             labels=labels,
-            pctdistance=0.85, shadow=True,
+            pctdistance=0.85, shadow=True, labeldistance=0.99,
             wedgeprops=dict(width=0.3, edgecolor='white'),startangle=40)
 
     plt.pie(percent, radius=0.7,
             colors=['xkcd:green','xkcd:red','xkcd:green','xkcd:red','xkcd:green','xkcd:red','xkcd:green','xkcd:red','xkcd:green','xkcd:red',
                     'xkcd:green','xkcd:red','xkcd:green','xkcd:red'],
-            wedgeprops=dict(width=0.3, edgecolor='white'), labels=percent,            #autopct='%.2f%%',
-            pctdistance=0.9, labeldistance=0.8, shadow=True,startangle=40)
+            wedgeprops=dict(width=0.3, edgecolor='white'), labels=percent,
+            pctdistance=0.9, labeldistance=0.7, shadow=True,startangle=40)
     plt.legend(labels=labels2, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 15},bbox_transform=plt.gcf().transFigure, title="Power Concerning")
     plt.axis('equal')
-    plt.title('Power Concerning According to the Classification Model')
-
-    plt.savefig('{}/printPowerChartByCriteria.png'.format(results_dir))
+    plt.title('Papers With Power Consideration \n According to the Classification Model')
+    title = 'PapersWithPowerConsiderationInnerAccordingtotheClassificationModelOuter'
+    plt.tight_layout()
+    var = "{}/03printPowerChartByCriteria" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/03printPowerChartByCriteria", shell=True)
+    plt.savefig(var.format(results_dir + "/03printPowerChartByCriteria"))
     plt.show()
 
 def ExtractImprovedObject(improvedObject,selection_criteria):
@@ -411,15 +465,13 @@ def ExtractImprovedObject(improvedObject,selection_criteria):
     elif selection_criteria == "S2H-IO -Soft-2-improve-IO-on-Hardware":
         #[I/O link over-clocking]-[SSD[nf][rd(Altera Stratix IV GX FPGA PCle)]-[SSD]
         ExtractS2HDevices(improvedObject)
-        print("xxxx")
     elif selection_criteria == "S2SS-IO -Soft-2-improve-IO-on-Storage-Systems":
         # [writeback scheme(DFW)]-[Stotrage System[File System(EXT3)][rsee(1m2d)]]-[HDD&SSD]
-        #ExtractH2HDevices(improvedObject)
-        print("yyyyy")
+        ExtractS2SSDevices(improvedObject)
     elif selection_criteria == "ARCHITECTURE":
         #[duplication-aware flash cache architecExtractH2HDevices(improvedObject)ture (DASH)]-[Cloud[rsee(1m)]]-[Flash&HDD]
-        #ExtractH2HDevices(improvedObject)
-        print("zzzzz")
+        ExtractARCH(improvedObject)
+
 
 def CreateDict_H2H_improvedObject(improvedObject):
     if improvedObject not in dict_H2H_ReachedObject:
@@ -434,14 +486,18 @@ def print_H2H_ReachedObject():
     for device, value in dict_H2H_ReachedObject.items():
         labels.append(device)
         qtdLabels.append(value)
-
-    #colors = ['red', 'green', 'yellow']
-    fig1, ax1 = plt.subplots(figsize=(7, 7))
+    plt.rcParams.update({'font.size': 13.0})
+    fig1, ax1 = plt.subplots(figsize=(15, 8))
     ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270)
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-
-    plt.savefig('{}/print_H2H_ReachedObject.png'.format(results_dir))
+    plt.title('Improved Hardware Class by Hardware')
+    title = 'ImprovedHardwareClassbyHardware'
+    plt.tight_layout()
+    var = "{}/08printH2HReachedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/08printH2HReachedObject", shell=True)
+    plt.savefig(var.format(results_dir + "/08printH2HReachedObject"))
     plt.show()
+
 
 def ExtractDict_H2S_improvedObject(improvedObject): #[File System(HDFS)]
     word = ""
@@ -526,9 +582,9 @@ def print_H2S_ReachedObject():
     # {'DATABASE': {1: {'IBM SOLIDDB': 1}}, 'IN-MEMORY KEY-VALUE STORE': {1: {'MEMCACHE': 1}}, 'APPLICATION': {1: {'GENOME SEARCH': 1}},
     # 'FRAMEWORK': {2: {'SPARK': 1, 'HADOOP MAPREDUCE': 1}}, 'FILE SYSTEM': {2: {'HDFS': 2}}}
     # ['DATABASE', 'IN-MEMORY KEY-VALUE STORE', 'APPLICATION', 'FRAMEWORK', 'FILE SYSTEM']   #improvedObjClassName
- # i  [1, 1, 1, 2, 2] quantidade de vezes que apareceu a aplicação.                          #improvedClassQtd
+    # i  [1, 1, 1, 2, 2] quantidade de vezes que apareceu a aplicação.                          #improvedClassQtd
     # ['IBM SOLIDDB', 'MEMCACHE', 'GENOME SEARCH', 'SPARK', 'HADOOP MAPREDUCE', 'HDFS']      #improvedSpecificObjName
- # j  [1, 1, 1, 1, 1, 2]                                                                     #improvedSpecificObjQtd
+    # j  [1, 1, 1, 1, 1, 2]                                                                     #improvedSpecificObjQtd
 
     cont = 0
     item = 1
@@ -545,19 +601,22 @@ def print_H2S_ReachedObject():
         elif i == j:  # um elemento correspondente de cada vetor
             percentObjSpecific.append(1)
 
-
-
-    plt.pie(improvedClassQtd, radius=1, labels=improvedObjClassName, pctdistance=0.85, shadow=True, autopct='%.2f%%',
+    plt.rcParams.update({'font.size': 13.0})
+    plt.subplots(figsize=(11, 9))
+    plt.pie(improvedClassQtd, radius=1, pctdistance=0.85, shadow=True, autopct='%.2f%%',
             wedgeprops=dict(width=0.3, edgecolor='white'),startangle=40)
 
-    plt.pie(improvedSpecificObjQtd, radius=0.7, labels=improvedSpecificObjName, wedgeprops=dict(width=0.3, edgecolor='white'),
+    plt.pie(improvedSpecificObjQtd, radius=0.7, labels=improvedSpecificObjName, wedgeprops=dict(width=0.3, edgecolor='white'),# autopct='%.2f%%',
              pctdistance=0.9, labeldistance=0.6, shadow=True,startangle=40, textprops = dict(rotation_mode = 'anchor', va='center', ha='left'))
-    #plt.legend(bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 15},bbox_transform=plt.gcf().transFigure, title="Power Concerning")
+    plt.legend(labels=improvedObjClassName, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 11},
+               bbox_transform=plt.gcf().transFigure, title="Improved Class")
     plt.axis('equal')
-    plt.title('Improved Software Class by Hardware')
-
-    plt.savefig('{}/print_H2S_ReachedObject.png'.format(results_dir))
-
+    plt.title('H2S - Software Class Improved by Hardware')
+    title = 'H2SSoftwareClassImprovedbyHardware'
+    plt.tight_layout()
+    var = "{}/09printH2SReachedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/09printH2SReachedObject", shell=True)
+    plt.savefig(var.format(results_dir + "/09printH2SReachedObject"))
     plt.show()
 
 def ExtractDict_H2SS_improvedObject(improvedObject): #[File System(HDFS)]
@@ -728,47 +787,66 @@ def printDict_H2SS_improvedObject():
     # GENERALOBJCLASS
     labels = objClass
     qtdLabels = objClassQtd
-
-    #explode = (0.2, 0.0)
+    plt.rcParams.update({'font.size': 15.0})
     colors = ['dodgerblue']
     fig1, ax1 = plt.subplots(figsize=(7, 7))
-    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors,# explode=explode,
+    ax1.pie(qtdLabels, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors,# explode=explode,
             wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,
+    plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 12},
+               bbox_transform=plt.gcf().transFigure, title="Improved Object Class")
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    plt.savefig('{}/printDict_H2SS_improvedObjectGENERALCLASS.png'.format(results_dir))
+    plt.title('H2SS - General Object Improved Class')
+    title = 'H2SSGeneralObjectImprovedClass'
+    plt.tight_layout()
+    var = "{}/10printDictH2SSimprovedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/10printDictH2SSimprovedObject", shell=True)
+    plt.savefig(var.format(results_dir + "/10printDictH2SSimprovedObject"))
     plt.show()
+
+
 
 
     #ENVIRONMENTCLASS
     labels2 = []
     labels = envClass
     if labels[0] == "RSEE":
-        labels2=["RSEE - Real Small Evaluated Environment","SSEE - Software Simulated Evaluated Environment"]
+        labels2=["RSEE - Real Small","SSEE - Software Simulated"]
         colors = ['green', 'red']
     else:
-        labels2 == ["SSEE - Software Simulated Evaluated Environment", "RSEE - Real Small Evaluated Environment"]
+        labels2 == ["SSEE - Software Simulated", "RSEE - Real Small"]
         colors = ['red', 'green']
 
     qtdLabels = envClassQtd
     explode = (0.2, 0.0)
     fig1, ax1 = plt.subplots(figsize=(7, 7))
-    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270, colors=colors, explode=explode, wedgeprops=dict(width=0.5, edgecolor='white'))# explode=explode,
-    plt.legend(labels=labels2, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 8}, bbox_transform=plt.gcf().transFigure, title="Evaluated Environment")
+    ax1.pie(qtdLabels,  autopct='%1.1f%%', shadow=True, startangle=270, colors=colors, explode=explode, wedgeprops=dict(width=0.5, edgecolor='white'))# explode=explode,
+    plt.legend(labels=labels2, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 9}, bbox_transform=plt.gcf().transFigure, title="Evaluated Environment")
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    plt.savefig('{}/printDict_H2SS_improvedObjectENVIRONMENT.png'.format(results_dir))
+    plt.title('H2SS - Class of Evaluated Environment')
+    title = 'H2SSClassofEvaluatedEnvironment'
+    plt.tight_layout()
+    var = "{}/10printDictH2SSimprovedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/10printDictH2SSimprovedObject",
+                    shell=True)
+    plt.savefig(var.format(results_dir + "/10printDictH2SSimprovedObject"))
     plt.show()
-
-
 
     # SPECIFICOBJCLASS
     labels = speObjClass
     qtdLabels = speObjQtd
     fig1, ax1 = plt.subplots(figsize=(7, 7))
-    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, startangle=270, #colors=colors,# explode=explode,
+    ax1.pie(qtdLabels, autopct='%1.1f%%', shadow=True, startangle=270, #colors=colors,# explode=explode,
             wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,
+    plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 9},
+               bbox_transform=plt.gcf().transFigure, title="Improved Class")
     ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    plt.title('Evaluated Environment')
-    plt.savefig('{}/printDict_H2SS_improvedObjectSPECIFICOBJCLASS.png'.format(results_dir))
+    plt.title('Specific Improved Object Class')
+    title = 'SpecificImprovedObjectClass'
+    plt.tight_layout()
+    var = "{}/10printDictH2SSimprovedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/10printDictH2SSimprovedObject",
+                    shell=True)
+    plt.savefig(var.format(results_dir + "/10printDictH2SSimprovedObject"))
     plt.show()
 
 
@@ -781,75 +859,33 @@ def printDict_H2SS_improvedObject():
         elif "ss" in env:
             colors.append("red")
     qtdLabels = envTypeQtd
-    labelsEvaluatedEnvironment = ["C - Cluster",
-                                  "N - Node",
-                                  "S - Server",
-                                  "PC - Personal Computer",
-                                  "D - Disk",
-                                  "Sd - Solid Disk",
+    labelsEvaluatedEnvironment = ["SS - Software Simulated",
+                                  "RS - Real Small",
+                                  "C - Cluster\nN - Node\nS - Server\nPC - Personal Computer\nD - Disk\nSd - Solid Disk",
                                   "M - Machine",
                                   "NF - Not Found",
                                   "V - Virtual",
                                   "FLM - Flash Memory",
                                   "FD - Flash Disk",
-                                  "VM - Virtual Machine",
+                                  "VM - Virtual Machine"
                                   ]
-    plt.rcParams.update({'font.size': 6.0})
-    #y_pos = np.arange(len(envTypeQtd))
+
+    plt.rcParams.update({'font.size': 8.0})
+    plt.subplots(figsize=(8,9))
     clrs = ['red' if ("ss" in x) else 'green' for x in envType]
-    sb.barplot(x=envType, y=envTypeQtd, palette=clrs)  # color=clrs)
+    sb.barplot(x=envType, y=envTypeQtd, palette=clrs, color=clrs)
+    #sb.tsplot(data=envType, time="timepoint", unit="subject", condition="ROI", value="BOLD signal")
 
-    colors = ["red", "green"]
-    plt.legend(labels=["SS - Software Simulated","RS - Real Small"], bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 8}, bbox_transform=plt.gcf().transFigure, title="Hardware Infrastructure")
-    plt.savefig('{}/printDict_H2SS_improvedObjectENVRYPE.png'.format(results_dir))
-    plt.show()
-
-
-    '''
-    ---------------------------------------------------------------
-                    Bar Chart
-        plt.bar(y_pos, envTypeQtd, align='center', alpha=0.5)
-    plt.xticks(y_pos, envType, rotation=0, ha='center',size=7)
-    for i, v in enumerate(envTypeQtd):
-        plt.text(i, v, str(v), color='red', size=8, ha='center')
-    plt.xlabel('Workload', fontsize=10)
-    plt.ylabel('Occurence Number')
-    plt.title('Programming language usage')
+    plt.legend(labels=labelsEvaluatedEnvironment, bbox_to_anchor=(1.05, 1), loc=1, prop={'size': 8}, borderaxespad=0., title="Environment Class")
+    plt.title('Hardware Infrastructure Used To Evaluation')
+    title = 'HardwareInfrastructureUsedToEvaluation'
     plt.tight_layout()
-    --------------------------------------------------------------
-                    Pie Chart With Legend
-    labels = envType
-    colors = []
-    for env in labels:
-        if "rs" in env:
-            colors.append("green")
-        elif "ss" in env:
-            colors.append("red")
-    print(labels)
-    print(colors)
-
-    qtdLabels = envTypeQtd
-    labelsEvaluatedEnvironment=["C - Cluster",
-                                "N - Node",
-                                "S - Server",
-                                "PC - Personal Computer",
-                                "D - Disk",
-                                "Sd - Solid Disk",
-                                "M - Machine",
-                                "NF - Not Found",
-                                "V - Virtual",
-                                "FLM - Flash Memory",
-                                "FD - Flash Disk",
-                                "VM - Virtual Machine",
-                                ]
-    #colors = ['dodgerblue']
-    fig1, ax1 = plt.subplots()
-    ax1.pie(qtdLabels, labels=labels, autopct='%1.1f%%', shadow=True, colors=colors,startangle=270, wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,colors=colors,
-    plt.legend(labels=labelsEvaluatedEnvironment, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 8}, bbox_transform=plt.gcf().transFigure, title="Hardware Infrastructure")
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    plt.title('Evaluated Environment Specification')
+    var = "{}/10printDictH2SSimprovedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/10printDictH2SSimprovedObject",
+                    shell=True)
+    plt.savefig(var.format(results_dir + "/10printDictH2SSimprovedObject"))
     plt.show()
-    '''
+
 
 def ExtractS2SDevices(improvedObject):
     object = improvedObject.upper()
@@ -907,6 +943,11 @@ def CreateDict_S2S_implementedObject(improvedGeneralObjClass, implementedObj):
     #improvedSpecificObjPlace -> ORANGEFS
     #implementedObj -> ORANGEFS
 
+    if improvedGeneralObjClass == "APPLICATIONS":
+        print(improvedGeneralObjClass)
+        print(implementedObj)
+        #print(improvedSpecificObjPlace)
+
     #Verifica se a classe de objeto está no dicionario
     if improvedGeneralObjClass not in dict_S2S_ReachedImplementedObject.keys():
         first = {}
@@ -935,6 +976,8 @@ def CreateDict_S2S_implementedObject(improvedGeneralObjClass, implementedObj):
         obj = {implementedObj: val2}
         subdict.update(obj)
 
+
+
     dict_S2S_ReachedImplementedObject[improvedGeneralObjClass] = {}
     dict_S2S_ReachedImplementedObject[improvedGeneralObjClass] = subdict
 def printDict_S2S_improvedObject():
@@ -953,12 +996,14 @@ def printDict_S2S_improvedObject():
                 improvedSpecificObjPlace.append(impGenObjCla)
                 improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
 
-
-    plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.85, shadow=True, autopct='%.2f%%', wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
+    plt.rcParams.update({'font.size': 10.0})
+    plt.subplots(figsize=(12,9))
+    plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.85, labeldistance=0.99, shadow=True, autopct='%.2f%%', wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
+    plt.rcParams.update({'font.size': 7.0})
     patches, texts = plt.pie(improvedSpecificObjPlaceQtd, radius=0.7, labels=improvedSpecificObjPlace,rotatelabels = 270, wedgeprops=dict(width=0.3, edgecolor='white'), pctdistance=5, labeldistance=0.8, shadow=True, startangle=180,
             textprops=dict(rotation_mode='anchor', va='center', ha='left'))
     join = []
-
+    plt.rcParams.update({'font.size': 10.0})
     for t in texts:
         t.set_horizontalalignment('center')
 
@@ -967,11 +1012,55 @@ def printDict_S2S_improvedObject():
     for a,b in zip(improvedSpecificObjPlace,improvedSpecificObjPlaceQtd):
         join.append(str(a)+" ="+str(b))
 
-    plt.rcParams['font.size'] = 5
-    plt.legend(labels=join, bbox_to_anchor=(1, 0),loc="lower right", prop={'size': 7},bbox_transform=plt.gcf().transFigure, title="Power Concerning")
+    plt.legend(labels=join, bbox_to_anchor=(1, 0),loc="lower right", prop={'size': 8},bbox_transform=plt.gcf().transFigure)
     plt.axis('equal')
-    plt.title('Improved Software Class by Hardware')
-    plt.savefig('{}/printDict_S2S_improvedObject.png'.format(results_dir))
+    plt.title('S2S - Improved Object Class and its Specific Improved Component')
+    title = 'S2SImprovedObjectClassOutanditsSpecificImprovedComponentInner'
+    plt.tight_layout()
+    var = "{}/11printDictS2SimprovedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/11printDictS2SimprovedObject", shell=True)
+    plt.savefig(var.format(results_dir + "/11printDictS2SimprovedObject"))
+    plt.show()
+def printDict_S2S_implementedObject():
+#<class 'dict'>: {'OPERATIONAL SYSTEM': {'OPERATIONAL SYSTEM': 6, 'LINUX': 6}, 'FRAMEWORK': {'HADOOP': 2, 'FRAMEWORK': 6, 'FLAME-MR': 1, 'SPARK': 3}
+    improvedGeneralObjClass = []
+    improvedGeneralObjClassQtd = []
+    improvedSpecificObjPlace = []
+    improvedSpecificObjPlaceQtd = []
+
+    for impGeneralObjClass, especificObjs in dict_S2S_ReachedImplementedObject.items():
+        improvedGeneralObjClass.append(impGeneralObjClass)
+        for impGenObjCla, impGenObjClaQtd in especificObjs.items():
+            if impGenObjCla == impGeneralObjClass:
+                improvedGeneralObjClassQtd.append(impGenObjClaQtd)
+            else:
+                improvedSpecificObjPlace.append(impGenObjCla)
+                improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+
+    plt.rcParams.update({'font.size': 10.0})
+    plt.subplots(figsize=(12,9))
+    plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.85, labeldistance=0.99, shadow=True, wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
+    plt.rcParams.update({'font.size': 7.0})
+    patches, texts = plt.pie(improvedSpecificObjPlaceQtd, radius=0.9, labels=improvedSpecificObjPlace,rotatelabels = 270, wedgeprops=dict(width=0.3, edgecolor='white'), pctdistance=5, labeldistance=0.8, shadow=True, startangle=180,
+            textprops=dict(rotation_mode='anchor', va='center', ha='left'))
+    join = []
+    plt.rcParams.update({'font.size': 10.0})
+    for t in texts:
+        t.set_horizontalalignment('center')
+
+    for a,b in zip(improvedGeneralObjClass, improvedGeneralObjClassQtd):
+        join.append(str(a)+" ="+str(b))
+    for a,b in zip(improvedSpecificObjPlace,improvedSpecificObjPlaceQtd):
+        join.append(str(a)+" ="+str(b))
+
+    plt.legend(labels=join, bbox_to_anchor=(1, 0),loc="lower right", prop={'size': 6},bbox_transform=plt.gcf().transFigure)
+    plt.axis('equal')
+    plt.title('S2S - Improved Object Class and its Implemented Object Class')
+    title = 'S2SImprovedObjectClassOutanditsImplementedObjectClassInner'
+    plt.tight_layout()
+    var = "{}/11printDictS2SimprovedObject" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/11printDictS2SimprovedObject", shell=True)
+    plt.savefig(var.format(results_dir + "/11printDictS2SimprovedObject"))
     plt.show()
 
 def ExtractS2HDevices(improvedObject):
@@ -1136,26 +1225,80 @@ def CreateDict_S2H_improvedObject(improvedGeneralObjClass,implementedSpecificObj
            obj = {deviceSpecific: val2}
            subsubdict.update(obj)
 
-    if deviceClass == "RD":
-        print(title)
-        print(title)
-
     subdict[deviceClass] = {}
     subdict[deviceClass] = subsubdict
     dict_S2H_ReachedImprovedObject["deviceClass"] = subdict
 def printDict_S2H_improvedObject():
     #[(PGC)] - [SSD[simulator(MSRsim)][sd(MSRsim)]] - [SSD]
     #[garbage collector] - [N] - [SPC(Financial) & Cello & TPC(TPC - H) & OpenMail]
-    improvedGeneralObjClass = []
-    improvedGeneralObjClassQtd = []
-    improvedSpecificObjPlace = []
-    improvedSpecificObjPlaceQtd = []
 
     for element, subdict_S2H_ReachedImprovedObject in dict_S2H_ReachedImprovedObject.items():
         improvedGeneralObjClass = []
         improvedGeneralObjClassQtd = []
         improvedSpecificObjPlace = []
         improvedSpecificObjPlaceQtd = []
+
+
+        if element == "improvedGeneralObjClass":
+            colors = []
+            plt.rcParams['font.size'] = 7
+            for impGeneralObjClass, classQtd in subdict_S2H_ReachedImprovedObject.items():
+                improvedGeneralObjClass.append(impGeneralObjClass)
+                improvedGeneralObjClassQtd.append(classQtd)
+                if impGeneralObjClass == "FLASH MEMORY":
+                    colors.append("pink")
+                elif impGeneralObjClass == "SPM":
+                    colors.append("deeppink")
+                elif impGeneralObjClass == "SSD":
+                    colors.append("red")
+                elif impGeneralObjClass == "FLASH":
+                    colors.append("pink")
+                elif impGeneralObjClass == "SCM":
+                    colors.append("tomato")
+                elif impGeneralObjClass == "DRAM-SSD":
+                    colors.append("darkviolet")
+                elif impGeneralObjClass == "XILINX ZYNQ":
+                    colors.append("cornflowerblue")
+                elif impGeneralObjClass == "GPU":
+                    colors.append("purple")
+                elif impGeneralObjClass == "NVM":
+                    colors.append("yellow")
+                elif impGeneralObjClass == "PCM":
+                    colors.append("gold")
+                elif impGeneralObjClass == "SCRATCHPAD MEMORY":
+                    colors.append("black")
+                elif impGeneralObjClass == "MEMORY":
+                    colors.append("blue")
+                elif impGeneralObjClass == "HDD":
+                    colors.append("green")
+                elif impGeneralObjClass == "DRAM":
+                    colors.append("blue")
+                elif impGeneralObjClass == "H-SMR":
+                    colors.append("grey")
+                elif impGeneralObjClass == "OSD":
+                    colors.append("orange")
+
+
+            plt.rcParams.update({'font.size': 15.0})
+            fig1, ax1 = plt.subplots(figsize=(9,9))
+            ax1.pie(improvedGeneralObjClassQtd, colors=colors, autopct='%1.1f%%', pctdistance=0.9, radius=1,
+                    counterclock=False, wedgeprops=dict(width=1.0, edgecolor='white'),
+                    shadow=True, startangle=10,  labeldistance=1.05)  # , wedgeprops = { 'linewidth': 1, "edgecolor" :"k" })
+            plt.legend(labels=improvedGeneralObjClass, bbox_to_anchor=(1, 0), prop={'size': 10}, loc="lower right",
+                       bbox_transform=plt.gcf().transFigure)
+
+            ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+            #ax1.set_title('Accepted Papers Grouped by Selection Criteria')
+            plt.title('S2H - Improved Device')
+            title = 'S2HImprovedDevice'
+            plt.tight_layout()
+            var = "{}/12printDictS2HimprovedObject" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/12printDictS2HimprovedObject", shell=True)
+            plt.savefig(var.format(results_dir + "/12printDictS2HimprovedObject"))
+            plt.show()
+
+        #-----------------------------------------------------------------------
+
         if element == "implementedSpecificObjPlace":
             plt.rcParams['font.size'] = 7
             for impGeneralObjClass, especificObjs in subdict_S2H_ReachedImprovedObject.items():
@@ -1166,34 +1309,36 @@ def printDict_S2H_improvedObject():
                     else:
                         improvedSpecificObjPlace.append(impGenObjCla)
                         improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+            # plt.pie([1, 1, 1, 1, 1, 1, 1], radius=1, colors=colors, labels=labels, pctdistance=0.85, shadow=True, labeldistance=0.99, wedgeprops=dict(width=0.3, edgecolor='white'), startangle=40)
 
-            plt.subplots(figsize=(10, 10))
-            plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.85, shadow=True,
+            plt.rcParams.update({'font.size': 11.0})
+            plt.subplots(figsize=(11,9))
+            plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.94, labeldistance=0.99, shadow=True,
                     autopct='%.2f%%', wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
+            plt.rcParams.update({'font.size': 7.0})
             patches, texts = plt.pie(improvedSpecificObjPlaceQtd, radius=0.7, labels=improvedSpecificObjPlace, rotatelabels=270,
                                      wedgeprops=dict(width=0.3, edgecolor='white'), pctdistance=5, labeldistance=0.8,
                                      shadow=True, startangle=180,
                                      textprops=dict(rotation_mode='anchor', va='center', ha='left'))
             join = []
-
+            plt.rcParams.update({'font.size': 10.0})
             for t in texts:
                 t.set_horizontalalignment('center')
-
             for a, b in zip(improvedGeneralObjClass, improvedGeneralObjClassQtd):
                 join.append(str(a) + " =" + str(b))
             for a, b in zip(improvedSpecificObjPlace, improvedSpecificObjPlaceQtd):
                 join.append(str(a) + " =" + str(b))
-
-            #fig1, ax1 = plt.subplots(figsize=(7, 7))
-
             plt.legend(labels=join, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 7},
-                       bbox_transform=plt.gcf().transFigure, title="Power Concerning")
+                       bbox_transform=plt.gcf().transFigure)#, title="Power Concerning")
             plt.axis('equal')
-            plt.title('Improved Software Class by Hardware')
-            plt.savefig('{}/printDict_S2H_improvedObjectSPECIFICOBJ.png'.format(results_dir))
+            plt.title('S2H - Implemented Object')
+            title = 'S2HImplementedObject'
+            plt.tight_layout()
+            var = "{}/12printDictS2HimprovedObject" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/12printDictS2HimprovedObject",
+                            shell=True)
+            plt.savefig(var.format(results_dir + "/12printDictS2HimprovedObject"))
             plt.show()
-
-
 
         if element == "deviceClass":
             print("printando o subdict pra ver se está certo",subdict_S2H_ReachedImprovedObject)
@@ -1235,7 +1380,6 @@ def printDict_S2H_improvedObject():
                             aux1 = {impGenObjCla: impGenObjClaQtd}
                             subdictdeviceUpdate.update(aux1)
                 #atualiza a quantidade total de elementos da classe, isso é necessario pq um objeto X_Z de tamanho 1 deve se transformar em dois objetos de tamanho 1, X e Z.
-                print("OOOOOOOTTTOOOOOOOOOOOOOTALLLLLLLLLLLLLL EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n",totalClaSum,"ADICIONADOS")
                 for impGenObjCla, impGenObjClaQtd in especificObjs.items():
                     if impGenObjCla == impGeneralObjClass:
                         totalClaSum += impGenObjClaQtd
@@ -1244,9 +1388,6 @@ def printDict_S2H_improvedObject():
                 dictdeviceUpdate[impGeneralObjClass]= subdictdeviceUpdate
                 subdictdeviceUpdate ={}
                 totalClaSum = 0
-
-
-            print(dictdeviceUpdate) #New dictionary with the right values
 
             #Agora devo fazer o processo de inserção com o novo dicionario DICTDEVICEUPDATE.
             improvedGeneralObjClass = []
@@ -1257,8 +1398,6 @@ def printDict_S2H_improvedObject():
             plt.rcParams['font.size'] = 7
             for impGeneralObjClass, especificObjs in dictdeviceUpdate.items():
                 improvedGeneralObjClass.append(impGeneralObjClass)
-                if impGeneralObjClass == "RD":
-                    print("DICIONARIO DO VETOR NOVO",especificObjs)
                 for impGenObjCla, impGenObjClaQtd in especificObjs.items():
                     if impGenObjCla == impGeneralObjClass:
                         improvedGeneralObjClassQtd.append(impGenObjClaQtd)
@@ -1266,45 +1405,617 @@ def printDict_S2H_improvedObject():
                         improvedSpecificObjPlace.append(impGenObjCla)
                         improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
 
-            print(improvedGeneralObjClassQtd,"AA SOMA Eeeeee ",sum(improvedGeneralObjClassQtd))
-            print(improvedGeneralObjClass)
-            plt.subplots(figsize=(10, 10))
-            plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.85, shadow=True,
-                    autopct='%.2f%%', wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
-            print(improvedSpecificObjPlaceQtd, "AA SOMA E ",sum(improvedSpecificObjPlaceQtd))
-            print(improvedSpecificObjPlace)
-            patches, texts = plt.pie(improvedSpecificObjPlaceQtd, radius=0.7, labels=improvedSpecificObjPlace,
+            plt.rcParams.update({'font.size': 11.0})
+            plt.subplots(figsize=(11,9))
+            plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.98, shadow=True, labeldistance=0.85 , autopct='%.2f%%', wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
+            plt.rcParams.update({'font.size': 7.0})
+            patches, texts = plt.pie(improvedSpecificObjPlaceQtd, radius=0.8, labels=improvedSpecificObjPlace,
                                      rotatelabels=270,
                                      wedgeprops=dict(width=0.3, edgecolor='white'), pctdistance=5, labeldistance=0.8,
                                      shadow=True, startangle=180,
                                      textprops=dict(rotation_mode='anchor', va='center', ha='left'))
-            join = []
 
+            join = []
+            plt.rcParams.update({'font.size': 10.0})
             for t in texts:
                 t.set_horizontalalignment('center')
-
             for a, b in zip(improvedGeneralObjClass, improvedGeneralObjClassQtd):
                 join.append(str(a) + " =" + str(b))
             for a, b in zip(improvedSpecificObjPlace, improvedSpecificObjPlaceQtd):
                 join.append(str(a) + " =" + str(b))
 
-            # print(improvedSpecificObjPlace)
-            # print(improvedSpecificObjPlaceQtd)
-            # improvedSpecificObjPlaceUPDATING = []
-            # improvedSpecificObjPlaceQtdUPDATING = []
-
             # verify if wxists the string "_" into the keys, if exists we shoud split and update the keys values into the dicts
-
-            # print(dictdeviceUpdate)
-            # print(dictdeviceUpdate)
-
-            plt.legend(labels=join, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 5},
-                       bbox_transform=plt.gcf().transFigure, title="Power Concerning")
+            plt.legend(labels=join, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 6},
+                       bbox_transform=plt.gcf().transFigure)#, title="Power Concerning")
             plt.axis('equal')
-            plt.title('Improved Software Class by Hardware')
-            plt.savefig('{}/printDict_S2H_improvedObjectDEVICECLASS.png'.format(results_dir))
+            plt.title('S2H - Class Of Experimented Device on the Evaluation Process')
+            title = 'S2HClassOfExperimentedDeviceonEvaluationProcess'
+            plt.tight_layout()
+            var = "{}/12printDictS2HimprovedObject" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/12printDictS2HimprovedObject",
+                            shell=True)
+            plt.savefig(var.format(results_dir + "/12printDictS2HimprovedObject"))
             plt.show()
 
+def ExtractS2SSDevices(improvedObject):
+    StorageDomainVet = []
+    implementedSpecificObjPlaceVet = []
+    EnvironmentVet = []
+
+    object = improvedObject.upper()
+    object = re.split('; |, |\*|[[]', object)
+
+    if "-" in object[0]:
+        StorageDomainAUX= object[0]
+        StorageDomainAUX = StorageDomainAUX.split('-')
+    else:
+        StorageDomainAUX = object[0]
+
+
+    if type(StorageDomainAUX) == list:
+        for i in StorageDomainAUX:
+            aux = CleanVariable(i)
+            StorageDomainVet.append(aux)
+    else:
+        StorageDomainVet.append(CleanVariable(StorageDomainAUX))
+    del StorageDomainAUX
+
+
+    implementedSpecificObjPlaceAUX = object[1]
+    implementedSpecificObjPlaceAUX = re.split('; |, |\*|[(]', implementedSpecificObjPlaceAUX)
+    for i in implementedSpecificObjPlaceAUX:
+        aux = CleanVariable(i)
+        implementedSpecificObjPlaceVet.append(aux)
+    del implementedSpecificObjPlaceAUX
+
+
+    EnvironmentAUX = object[2]
+    if "&" in EnvironmentAUX:
+        EnvironmentAUX = EnvironmentAUX.split('&')
+        for element in EnvironmentAUX:
+            element = re.split('; |, |\*|[(]', element)
+            EnvironmentVet.append(element)
+    else:
+        EnvironmentAUX = re.split('; |, |\*|[(]', EnvironmentAUX)
+        for i in EnvironmentAUX:
+            aux = CleanVariable(i)
+            EnvironmentVet.append(aux)
+        del EnvironmentAUX
+
+    CreateDict_S2SS_improvedObject(StorageDomainVet, implementedSpecificObjPlaceVet, EnvironmentVet)
+def CreateDict_S2SS_improvedObject(StorageDomainVet, implementedSpecificObjPlaceVet, EnvironmentVet):
+    #['STORAGE SYSTEM', 'RAID'] ['EMULATOR', 'MICROSOFTSSDSIM'] ['SSEE', 'MICROSOFTSSDSIM']
+    #['HPC'] ['NF', 'NOT FOUND'] ['RHEE', '1C_64N']
+
+    # improvedGeneralObjClass -> STORAGE System
+    # implementedSpecificObjPlaceVet -> [simulator, SSDsim]
+    # deviceClass -> RD or SD
+    # deviceSpecific
+
+    # Verifica se a classe de objeto está no dicionario
+    if "improvedGeneralObjClass" not in dict_S2SS_ReachedImprovedObject.keys():
+        first = {}
+        dict_S2SS_ReachedImprovedObject["improvedGeneralObjClass"] = first
+
+    # faz BKP do VALUE do dicionario
+    subdict = dict_S2SS_ReachedImprovedObject["improvedGeneralObjClass"]
+    del dict_S2SS_ReachedImprovedObject["improvedGeneralObjClass"]
+
+    # Faz a inserção da mesma CLASSE de objeto acima, e adiciona um valor para ela.
+    for StorageDomain in StorageDomainVet:
+        if StorageDomain not in subdict.keys():
+            aux1 = {StorageDomain: 1}
+            subdict.update(aux1)
+        else:
+            val1 = subdict[StorageDomain]
+            val1 += 1
+            obj = {StorageDomain: val1}
+            subdict.update(obj)
+
+    dict_S2SS_ReachedImprovedObject["improvedGeneralObjClass"] = {}
+    dict_S2SS_ReachedImprovedObject["improvedGeneralObjClass"] = subdict
+
+#--------------------------------------------------------------------------------
+# Faz a inserção da SPECIFIC OBJECT
+    if "implementedSpecificObjPlace" not in dict_S2SS_ReachedImprovedObject.keys():
+        first = {}
+        dict_S2SS_ReachedImprovedObject["implementedSpecificObjPlace"] = first
+
+    subdict = dict_S2SS_ReachedImprovedObject["implementedSpecificObjPlace"]
+    del dict_S2SS_ReachedImprovedObject["implementedSpecificObjPlace"]
+
+
+    objClass = implementedSpecificObjPlaceVet[0]
+    objSpecific = implementedSpecificObjPlaceVet[1]
+
+    if "2C_9N_16N" in EnvironmentVet:
+        print(title)
+        print(title)
+
+
+    # Verifica se a classe de objeto está no dicionario
+    if objClass not in subdict.keys():
+        first = {}
+        subdict[objClass] = first
+
+    # faz BKP do VALUE do dicionario
+    subsubdict = subdict[objClass]
+    del subdict[objClass]
+
+    # Adiciona tanto a classe quanto sua especificação no mesmo nível do subsub dict ----  {'SIMULATOR': {'SIMULATOR': 1, 'PCMSIM': 1}} ----
+    #                                                                                         subdict       subsubdict dictionary
+    if objClass not in subsubdict.keys():
+        aux1 = {objClass: 1}
+        subsubdict.update(aux1)
+    else:
+        val1 = subsubdict[objClass]
+        val1 += 1
+        obj = {objClass: val1}
+        subsubdict.update(obj)
+    # Faz a inserção da mesma SPECIFIC OBJECT de objeto acima, e adiciona um valor para ela.
+    if objSpecific not in subsubdict.keys():
+        aux2 = {objSpecific: 1}
+        subsubdict.update(aux2)
+    else:
+        val2 = subsubdict[objSpecific]
+        val2 += 1
+        obj = {objSpecific: val2}
+        subsubdict.update(obj)
+
+    subdict[objClass] = {}
+    subdict[objClass] = subsubdict
+
+    dict_S2SS_ReachedImprovedObject["implementedSpecificObjPlace"] = subdict
+
+
+#----------------------------------------------------------------
+#faz o Environment
+    deviceSpecifics = []
+    deviceClass =""
+    t = EnvironmentVet[0]
+    if type(t) == str:
+        deviceClass = EnvironmentVet[0]
+        deviceClass =CleanVariable(deviceClass)
+        deviceSpecifics = EnvironmentVet[1:]
+    else:
+        for vet in EnvironmentVet:
+            for i in vet:
+                if "EE" in i:
+                    deviceClass = i
+                    deviceClass = CleanVariable(deviceClass)
+                elif "EE" not in i:
+                    i = CleanVariable(i)
+                    deviceSpecifics.append(i)
+
+    # Verifica se a classe de objeto está no dicionario
+    if "deviceClass" not in dict_S2SS_ReachedImprovedObject.keys():
+        first = {}
+        dict_S2SS_ReachedImprovedObject["deviceClass"] = first
+
+    subdict = dict_S2SS_ReachedImprovedObject["deviceClass"]
+    del dict_S2SS_ReachedImprovedObject["deviceClass"]
+
+    # Verifica se a classe de objeto está no dicionario
+    if deviceClass not in subdict.keys():
+        first = {}
+        subdict[deviceClass] = first
+
+    # faz BKP do VALUE do dicionario
+    subsubdict = subdict[deviceClass]
+    del subdict[deviceClass]
+
+    if deviceClass not in subsubdict.keys():
+        aux1 = {deviceClass: 1}
+        subsubdict.update(aux1)
+    else:
+        val1 = subsubdict[deviceClass]
+        val1 += 1
+        obj = {deviceClass: val1}
+        subsubdict.update(obj)
+
+    for deviceSpecific in deviceSpecifics:
+        if deviceSpecific not in subsubdict.keys():
+            aux2 = {deviceSpecific: 1}
+            subsubdict.update(aux2)
+        else:
+            val2 = subsubdict[deviceSpecific]
+            val2 += 1
+            obj = {deviceSpecific: val2}
+            subsubdict.update(obj)
+
+    subdict[deviceClass] = {}
+    subdict[deviceClass] = subsubdict
+    dict_S2SS_ReachedImprovedObject["deviceClass"] = subdict
+def printDict_S2SS_improvedObject():
+    print(dict_S2SS_ReachedImprovedObject)
+    for element, subdict_S2SS_ReachedImprovedObject in dict_S2SS_ReachedImprovedObject.items():
+        improvedGeneralObjClass = []
+        improvedGeneralObjClassQtd = []
+        improvedSpecificObjPlace = []
+        improvedSpecificObjPlaceQtd = []
+
+        if element == "improvedGeneralObjClass":
+            plt.rcParams['font.size'] = 7
+            for impGeneralObjClass, classQtd in subdict_S2SS_ReachedImprovedObject.items():
+                improvedGeneralObjClass.append(impGeneralObjClass)
+                improvedGeneralObjClassQtd.append(classQtd)
+
+            plt.rcParams.update({'font.size': 10.0})
+            fig1, ax1 = plt.subplots(figsize=(9,9))
+            ax1.pie(improvedGeneralObjClassQtd, autopct='%1.1f%%', pctdistance=0.9, radius=1,
+                    counterclock=False, wedgeprops=dict(width=0.5, edgecolor='white'),
+                    shadow=True, startangle=10, labeldistance=1.05)
+            plt.legend(labels=improvedGeneralObjClass, bbox_to_anchor=(1, 0), prop={'size': 10}, loc="lower right", bbox_transform=plt.gcf().transFigure)
+
+
+            ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+            ax1.set_title('S2SS - Improved General Object Class(NÂO USAR)')
+            title = "S2SSImprovedGeneralObjectClass"
+            plt.tight_layout()
+            var = "{}/13printDictS2SSimprovedObject" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/13printDictS2SSimprovedObject",
+                            shell=True)
+            plt.savefig(var.format(results_dir + "/13printDictS2SSimprovedObject"))
+            plt.show()
+
+    #-------------------------------------------------------------------------------------------------
+        if element == "implementedSpecificObjPlace":
+            # Agora devo fazer o processo de inserção com o novo dicionario DICTDEVICEUPDATE.
+            improvedGeneralObjClass = []
+            improvedGeneralObjClassQtd = []
+            improvedSpecificObjPlace = []
+            improvedSpecificObjPlaceQtd = []
+
+            plt.rcParams['font.size'] = 7
+            for impGeneralObjClass, especificObjs in subdict_S2SS_ReachedImprovedObject.items():
+                improvedGeneralObjClass.append(impGeneralObjClass)
+                for impGenObjCla, impGenObjClaQtd in especificObjs.items():
+                    if impGenObjCla == impGeneralObjClass:
+                        improvedGeneralObjClassQtd.append(impGenObjClaQtd)
+                    else:
+                        improvedSpecificObjPlace.append(impGenObjCla)
+                        improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+
+            plt.rcParams.update({'font.size': 11.0})
+            plt.subplots(figsize=(11, 10))
+            plt.pie(improvedGeneralObjClassQtd, radius=1, labels=improvedGeneralObjClass, pctdistance=0.92, labeldistance=0.99, shadow=True,autopct='%.2f%%', wedgeprops=dict(width=0.3, edgecolor='white'), startangle=180)
+            plt.rcParams.update({'font.size': 7.0})
+            patches, texts = plt.pie(improvedSpecificObjPlaceQtd, radius=0.9, labels=improvedSpecificObjPlace, rotatelabels=270, wedgeprops=dict(width=0.3, edgecolor='white'),
+                                     pctdistance=5, labeldistance=0.8,shadow=True, startangle=180, textprops=dict(rotation_mode='anchor', va='center', ha='left'))
+            join = []
+            for t in texts:
+                t.set_horizontalalignment('center')
+            for a, b in zip(improvedGeneralObjClass, improvedGeneralObjClassQtd):
+                join.append(str(a) + " =" + str(b))
+            for a, b in zip(improvedSpecificObjPlace, improvedSpecificObjPlaceQtd):
+                join.append(str(a) + " =" + str(b))
+
+            plt.rcParams.update({'font.size': 11.0})
+            plt.legend(labels=join, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 5.5},
+                       bbox_transform=plt.gcf().transFigure, title="Object Value")
+            plt.axis('equal')
+            plt.title('S2SS - Implemented Specific Object Place')
+            title = "S2SSImplementedSpecificObjectPlace"
+            plt.tight_layout()
+            var = "{}/13printDictS2SSimprovedObject" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/13printDictS2SSimprovedObject",
+                            shell=True)
+            plt.savefig(var.format(results_dir + "/13printDictS2SSimprovedObject"))
+            plt.show()
+
+    #-----------------------------------------------------------------------------------------------------------
+        if element == "deviceClass":
+            # Agora devo fazer o processo de inserção com o novo dicionario DICTDEVICEUPDATE.
+            improvedGeneralObjClass = []
+            improvedGeneralObjClassQtd = []
+            improvedSpecificObjPlace = []
+            improvedSpecificObjPlaceQtd = []
+            # plt.pie([1, 1, 1, 1, 1, 1, 1], radius=1, colors=colors, labels=labels, pctdistance=0.85, shadow=True, labeldistance=0.99, wedgeprops=dict(width=0.3, edgecolor='white'), startangle=40)
+            plt.rcParams['font.size'] = 7
+            for impGeneralObjClass, especificObjs in subdict_S2SS_ReachedImprovedObject.items():
+                improvedGeneralObjClass.append(impGeneralObjClass)
+                for impGenObjCla, impGenObjClaQtd in especificObjs.items():
+                    if impGenObjCla == impGeneralObjClass:
+                        improvedGeneralObjClassQtd.append(impGenObjClaQtd)
+                    else:
+                        improvedSpecificObjPlace.append(impGenObjCla)
+                        improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+
+            labels = improvedGeneralObjClass
+            qtdLabels = improvedGeneralObjClassQtd
+            plt.rcParams.update({'font.size': 15.0})
+            fig1, ax1 = plt.subplots(figsize=(9,9))
+            ax1.pie(qtdLabels, autopct='%1.1f%%', shadow=True, startangle=270, wedgeprops=dict(width=0.5, edgecolor='white'))
+            plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 13}, bbox_transform=plt.gcf().transFigure, title="Improved Class")
+            ax1.axis('equal')
+            plt.title('S2SS - Class of Used Environment on the Experimentation')
+            title = "S2SSClassofUsedEnvironmentontheExperimentation"
+            plt.tight_layout()
+            var = "{}/13printDictS2SSimprovedObject" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/13printDictS2SSimprovedObject",
+                            shell=True)
+            plt.savefig(var.format(results_dir + "/13printDictS2SSimprovedObject"))
+            plt.show()
+
+            for impGeneralObjClass, especificObjs in subdict_S2SS_ReachedImprovedObject.items():
+                improvedSpecificObjPlace = []
+                improvedSpecificObjPlaceQtd = []
+                Classe = ""
+                if impGeneralObjClass != "NF":
+                    Classe = impGeneralObjClass
+                    for impGenObjCla, impGenObjClaQtd in especificObjs.items():
+                        if impGenObjCla != impGeneralObjClass:
+                            improvedSpecificObjPlace.append(impGenObjCla)
+                            improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+
+                    labels = improvedSpecificObjPlace
+                    qtdLabels = improvedSpecificObjPlaceQtd
+                    fig1, ax1 = plt.subplots(figsize=(14,10))
+                    ax1.pie(qtdLabels, autopct='%1.1f%%', labels=labels, shadow=True, startangle=270, pctdistance=0.90, labeldistance=1, wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,
+                    plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 11},
+                               bbox_transform=plt.gcf().transFigure, title="Improved Class")
+                    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+                    plt.title("S2SS - " + Classe + " Environments Used on the Experimentation")
+                    title = "S2SS"+Classe+"EnvironmentsUsedonEvaluations"
+                    plt.tight_layout()
+                    var = "{}/13printDictS2SSimprovedObject" + title + ".png"
+                    subprocess.call(
+                        "mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/13printDictS2SSimprovedObject",
+                        shell=True)
+                    plt.savefig(var.format(results_dir + "/13printDictS2SSimprovedObject"))
+                    plt.show()
+
+
+                    labels = improvedSpecificObjPlace
+                    qtdLabels = improvedSpecificObjPlaceQtd
+                    y_pos = np.arange(len(labels))
+                    fig1, ax1 = plt.subplots(figsize=(13, 10))
+                    plt.bar(y_pos, qtdLabels, align='center', alpha=0.5)
+                    plt.xticks(y_pos, labels, rotation=85, ha='center', size=11)
+                    for i, v in enumerate(qtdLabels):
+                        plt.text(i, v, str(v), color='black', size=8, ha='center')
+
+                    sb.barplot(x=labels, y=qtdLabels)
+                    plt.tight_layout()
+                    ax1.xaxis.label.set_size(200)
+                    plt.xlabel(Classe+" Objects", fontsize=12)
+                    plt.ylabel('Quantity', fontsize=12)
+                    title = "S2SS" + Classe + "UsedEnvironmentOP02"
+                    plt.tight_layout()
+                    var = "{}/13printDictS2SSimprovedObject" + title + ".png"
+                    subprocess.call(
+                        "mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/13printDictS2SSimprovedObject",
+                        shell=True)
+                    plt.savefig(var.format(results_dir + "/13printDictS2SSimprovedObject"))
+                    plt.show()
+
+
+def ExtractARCH(improvedObject):
+    StorageDomainVet = []
+    EnvironmentVet = []
+
+    if title == "WHOBBS: An Object-Based Distributed Hybrid Storage Providing Block Storage for Virtual Machines":
+        print("wait")
+        print("wait")
+    object = improvedObject.upper()
+    object = re.split('; |, |\*|[[]', object)
+
+    StorageDomainAUX = object[0]
+    StorageDomainAUX = StorageDomainAUX.split('&')
+    if type(StorageDomainAUX) == list:
+        for i in StorageDomainAUX:
+            aux = CleanVariable(i)
+            StorageDomainVet.append(aux)
+    else:
+        StorageDomainVet.append(CleanVariable(StorageDomainAUX))
+    del StorageDomainAUX
+
+
+    EnvironmentAUX = object[1]
+    if "&" in EnvironmentAUX:
+        EnvironmentAUX = EnvironmentAUX.split('&')
+        for element in EnvironmentAUX:
+            element = re.split('; |, |\*|[(]', element)
+            EnvironmentVet.append(element)
+    else:
+        EnvironmentAUX = re.split('; |, |\*|[(]', EnvironmentAUX)
+        for i in EnvironmentAUX:
+            aux = CleanVariable(i)
+            EnvironmentVet.append(aux)
+        del EnvironmentAUX
+
+    CreateDict_ARCH_improvedObject(StorageDomainVet, EnvironmentVet)
+def CreateDict_ARCH_improvedObject(StorageDomainVet, EnvironmentVet):
+    # Verifica se a classe de objeto está no dicionario
+    if "StorageDomain" not in dict_ARCH_improvedObject.keys():
+        first = {}
+        dict_ARCH_improvedObject["StorageDomain"] = first
+
+    # faz BKP do VALUE do dicionario
+    subdict = dict_ARCH_improvedObject["StorageDomain"]
+    del dict_ARCH_improvedObject["StorageDomain"]
+
+    # Faz a inserção da mesma CLASSE de objeto acima, e adiciona um valor para ela.
+    for StorageDomain in StorageDomainVet:
+        if StorageDomain not in subdict.keys():
+            aux1 = {StorageDomain: 1}
+            subdict.update(aux1)
+        else:
+            val1 = subdict[StorageDomain]
+            val1 += 1
+            obj = {StorageDomain: val1}
+            subdict.update(obj)
+
+    dict_ARCH_improvedObject["StorageDomain"] = {}
+    dict_ARCH_improvedObject["StorageDomain"] = subdict
+
+    # ----------------------------------------------------------------
+    # faz o Environment
+    deviceSpecifics = []
+    deviceClass = ""
+    t = EnvironmentVet[0]
+    if type(t) == str:
+        deviceClass = EnvironmentVet[0]
+        deviceClass = CleanVariable(deviceClass)
+        deviceSpecifics = EnvironmentVet[1:]
+    else:
+        for vet in EnvironmentVet:
+            for i in vet:
+                if "EE" in i:
+                    deviceClass = i
+                    deviceClass = CleanVariable(deviceClass)
+                elif "EE" not in i:
+                    i = CleanVariable(i)
+                    deviceSpecifics.append(i)
+
+    #if "1D1SD" in deviceSpecifics:
+        #print(title)
+        #print(title)
+    # Verifica se a classe de objeto está no dicionario
+    if "deviceClass" not in dict_ARCH_improvedObject.keys():
+        first = {}
+        dict_ARCH_improvedObject["deviceClass"] = first
+
+    subdict = dict_ARCH_improvedObject["deviceClass"]
+    del dict_ARCH_improvedObject["deviceClass"]
+
+    # Verifica se a classe de objeto está no dicionario
+    if deviceClass not in subdict.keys():
+        first = {}
+        subdict[deviceClass] = first
+
+    # faz BKP do VALUE do dicionario
+    subsubdict = subdict[deviceClass]
+    del subdict[deviceClass]
+
+    if deviceClass not in subsubdict.keys():
+        aux1 = {deviceClass: 1}
+        subsubdict.update(aux1)
+    else:
+        val1 = subsubdict[deviceClass]
+        val1 += 1
+        obj = {deviceClass: val1}
+        subsubdict.update(obj)
+
+    for deviceSpecific in deviceSpecifics:
+        if deviceSpecific not in subsubdict.keys():
+            aux2 = {deviceSpecific: 1}
+            subsubdict.update(aux2)
+        else:
+            val2 = subsubdict[deviceSpecific]
+            val2 += 1
+            obj = {deviceSpecific: val2}
+            subsubdict.update(obj)
+
+    subdict[deviceClass] = {}
+    subdict[deviceClass] = subsubdict
+    dict_ARCH_improvedObject["deviceClass"] = subdict
+def printDict_ARCH_improvedObject():
+    for element, subdict_ARCH_improvedObject in dict_ARCH_improvedObject.items():
+        improvedGeneralObjClass = []
+        improvedGeneralObjClassQtd = []
+
+        if element == "StorageDomain":
+            plt.rcParams.update({'font.size': 15.0})
+            for impGeneralObjClass, classQtd in subdict_ARCH_improvedObject.items():
+                improvedGeneralObjClass.append(impGeneralObjClass)
+                improvedGeneralObjClassQtd.append(classQtd)
+
+            fig1, ax1 = plt.subplots(figsize=(10, 10))
+            ax1.pie(improvedGeneralObjClassQtd, autopct='%1.1f%%', pctdistance=0.9, radius=1,
+                    counterclock=False, wedgeprops=dict(width=0.5, edgecolor='white'),
+                    shadow=True, startangle=10, labeldistance=1.05)
+            plt.legend(labels=improvedGeneralObjClass, bbox_to_anchor=(1, 0), prop={'size': 13}, loc="lower right",
+                       bbox_transform=plt.gcf().transFigure)
+            ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+            ax1.set_title('Architecture Storage Domain')
+            title = "ArchitectureStorageDomain"
+            plt.tight_layout()
+            var = "{}/printDictARCHStorageDomain" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/ARCH", shell=True)
+            plt.savefig(var.format(results_dir + "/ARCH"))
+            plt.show()
+
+        # -----------------------------------------------------------------------------------------------------------
+        if element == "deviceClass":
+            # Agora devo fazer o processo de inserção com o novo dicionario DICTDEVICEUPDATE.
+            improvedGeneralObjClass = []
+            improvedGeneralObjClassQtd = []
+            improvedSpecificObjPlace = []
+            improvedSpecificObjPlaceQtd = []
+
+
+            for impGeneralObjClass, especificObjs in subdict_ARCH_improvedObject.items():
+                improvedGeneralObjClass.append(impGeneralObjClass)
+                for impGenObjCla, impGenObjClaQtd in especificObjs.items():
+                    if impGenObjCla == impGeneralObjClass:
+                        improvedGeneralObjClassQtd.append(impGenObjClaQtd)
+                    else:
+                        improvedSpecificObjPlace.append(impGenObjCla)
+                        improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+            labels = improvedGeneralObjClass
+            qtdLabels = improvedGeneralObjClassQtd
+            plt.rcParams.update({'font.size': 15.0})
+            fig1, ax1 = plt.subplots(figsize=(10,10))
+            ax1.pie(qtdLabels, autopct='%1.1f%%', shadow=True, startangle=270,  # colors=colors,# explode=explode,
+                    wedgeprops=dict(width=0.5, edgecolor='white'))  # explode=explode,
+            plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 15},
+                       bbox_transform=plt.gcf().transFigure)
+            ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+            plt.title('Architecture - Environment Class Used on the Experimentation')
+            plt.tight_layout()
+            title = "ArchtectureClassEnvironment"
+            var = "{}/printDictARCHEnvironment" + title + ".png"
+            subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/ARCH", shell=True)
+            plt.savefig(var.format(results_dir + "/ARCH"))
+            plt.show()
+
+            #plt.pie([1, 1, 1, 1, 1, 1, 1], radius=1, colors=colors, labels=labels, pctdistance=0.85, shadow=True, labeldistance=0.99, wedgeprops=dict(width=0.3, edgecolor='white'), startangle=40)
+
+            for impGeneralObjClass, especificObjs in subdict_ARCH_improvedObject.items():
+                improvedSpecificObjPlace = []
+                improvedSpecificObjPlaceQtd = []
+                Classe = ""
+                if impGeneralObjClass != "NF":
+                    Classe = impGeneralObjClass
+                    for impGenObjCla, impGenObjClaQtd in especificObjs.items():
+                        if impGenObjCla != impGeneralObjClass:
+                            improvedSpecificObjPlace.append(impGenObjCla)
+                            improvedSpecificObjPlaceQtd.append(impGenObjClaQtd)
+                    labels = improvedSpecificObjPlace
+                    qtdLabels = improvedSpecificObjPlaceQtd
+                    fig1, ax1 = plt.subplots(figsize=(13, 10))
+                    ax1.pie(qtdLabels, autopct='%1.1f%%', labels=labels, shadow=True, startangle=270, labeldistance=0.99, wedgeprops=dict(width=0.5, edgecolor='white'))
+                    plt.legend(labels=labels, bbox_to_anchor=(1, 0), loc="lower right", prop={'size': 12},
+                               bbox_transform=plt.gcf().transFigure, title="Improved Class")
+                    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+                    plt.title("Archtecture - Specific Experimented Environment of "+Classe+" Class")
+                    plt.tight_layout()
+                    title = "ArchtectureSpecificExperimentedEnvironmentof"+Classe+"Class"
+                    var = "{}/printDictARCHEnvironmentPie" + title + ".png"
+                    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/ARCH", shell=True)
+                    plt.savefig(var.format(results_dir+"/ARCH"))
+                    plt.show()
+
+                    #colors = []
+                    labels = improvedSpecificObjPlace
+                    qtdLabels = improvedSpecificObjPlaceQtd
+                    y_pos = np.arange(len(labels))
+                    fig1, ax1 = plt.subplots(figsize=(10,10))
+                    plt.bar(y_pos, qtdLabels, align='center', alpha=0.5, width=0.5)
+                    plt.xticks(y_pos, labels, rotation=75, ha='center', size=11)
+                    for i, v in enumerate(qtdLabels):
+                        plt.text(i, v, str(v), color='red', size=8, ha='center')
+
+                    plt.tight_layout()
+                    plt.title("Archtecture Specific Class " + Classe + " Used Environment")
+                    plt.xlabel(Classe + " Objects", fontsize=11)
+                    plt.ylabel('Quantity', fontsize=11)
+                    title = "Archtecture" + Classe + "UsedEnvironmentOP02"
+                    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/ARCH", shell=True)
+                    var = "{}/printDictARCHEnvironmentBar" + title + ".png"
+                    plt.savefig(var.format(results_dir+"/ARCH"))
+                    plt.show()
 
 def ExtractSelectioCriteria(selection_criteria):
     if selection_criteria not in dict_selectionCriteria:
@@ -1318,7 +2029,6 @@ def printSelectioCriteria():
     Criteriavalue = []
 
     colors = []
-
 
     for key, value in dict_selectionCriteria.items():
         if key == "H2H-IO -Hard-2-improve-IO-on-Hardware":
@@ -1362,17 +2072,22 @@ def printSelectioCriteria():
             Criteriavalue.append(value)
             colors.append("yellow")
 
+    plt.rcParams.update({'font.size': 14.0})
     explode = (0.1, 0.2, 0.3, 0.0, 0.0, 0.0, 0.0)
     fig1, ax1 = plt.subplots(figsize=(7,7))
-    ax1.pie(Criteriavalue, colors=colors, labels=Criterianame, explode=explode, autopct='%1.1f%%', pctdistance=0.3, radius=1, counterclock=False,
+    ax1.pie(Criteriavalue, colors=colors, explode=explode, autopct='%1.1f%%', pctdistance=0.3, radius=1, counterclock=False,wedgeprops=dict(width=1.0, edgecolor='white'),
             shadow=True, startangle=10, labeldistance=1.05)  # , wedgeprops = { 'linewidth': 1, "edgecolor" :"k" })
-    #plt.legend(bbox_to_anchor=(1, 0), loc="lower right", bbox_transform=plt.gcf().transFigure)
+    plt.legend(labels=Criterianame,bbox_to_anchor=(1, 0), prop={'size': 12}, loc="lower right", bbox_transform=plt.gcf().transFigure)
 
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    ax1.set_title('Accepted Papers Grouped by Selection Criteria')
+    ax1.axis('equal')
+    ax1.set_title('Accepted Papers According to the Selection Criteria')
+    title = 'AcceptedPapersAccordingtotheSelectionCriteria'
     plt.tight_layout()
-    plt.savefig('{}/printSelectioCriteria.png'.format(results_dir))
+    var = "{}/07printSelectioCriteria" + title + ".png"
+    subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/07printSelectioCriteria", shell=True)
+    plt.savefig(var.format(results_dir + "/07printSelectioCriteria"))
     plt.show()
+
 
 def ExtractDevice(devices,selection_criteria):
     device = devices.split('&')
@@ -1410,8 +2125,8 @@ def ExtractDevice(devices,selection_criteria):
             cont = int(dict_devicesByCriteria[selection_criteria][dispositive])
             dict_devicesByCriteria[selection_criteria][dispositive] = cont + 1
 def printDevicesChart():
-    explode = (0.01, 0.025, 0.015, 0.02, 0.03, 0.04, 0.05, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.015)
-    title = "Most Used Devices"
+    #explode = (0.01, 0.025, 0.015, 0.02, 0.03, 0.04, 0.05, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.015)
+    explode = (0.01, 0.025, 0.015, 0.02, 0.03, 0.04, 0.05, 0.02, 0.03, 0.04, 0.05, 0.06, 0.10, 0.14, 0.17, 0.015)
     CreateDevicesChartByCriteria(dict_devices, title, explode)
 def printDevicesChartByCriteria():
     explode = None
@@ -1435,7 +2150,7 @@ def printDevicesChartByCriteria():
             title  = "S2SS-IO"
             CreateDevicesChartByCriteria(value, title, explode)
         elif criteria == "ARCHITECTURE":
-            title  = "ARCH"
+            title  = "ARCHITECTURE"
             CreateDevicesChartByCriteria(value, title, explode)
 def CreateDevicesChartByCriteria(dict_devices,title,explode):
     devices = []
@@ -1539,31 +2254,38 @@ def CreateDevicesChartByCriteria(dict_devices,title,explode):
             colors.append("green")
 
     if explode == None:
-        fig, ax = plt.subplots(figsize=(7, 7))
-        plt.title('Most Used Devices in ' + title)
+        plt.rcParams.update({'font.size': 12.0})
+        fig, ax = plt.subplots(figsize=(8, 9))
+        plt.title(title+' - Most Considered Devices According to the Classification')
         data = qtdDevices
-        wedges, texts = ax.pie(data, colors=colors, wedgeprops=dict(width=0.5), pctdistance=0.3, radius=1, counterclock=False,
-                               shadow=False, startangle=60, labeldistance=1.1)#,autopct='%1.1f%%')
+        ax.pie(data, colors=colors, wedgeprops=dict(width=0.5), pctdistance=1.1, radius=1, counterclock=False,
+                               shadow=False, startangle=60, labeldistance=1.1,autopct='%1.1f%%')
 
-        plt.legend(wedges, devices, bbox_to_anchor=(1, 0), loc="lower right", bbox_transform=plt.gcf().transFigure)
+        plt.legend(devices, bbox_to_anchor=(1, 0), loc="lower right", bbox_transform=plt.gcf().transFigure)
         plt.gca().axis("equal")
+        title = title+'MostConsideredDevicesAccordingtotheClassification'
         plt.tight_layout()
+        var = "{}/05printDevicesChartByCriteria" + title + ".png"
+        subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/05printDevicesChartByCriteria", shell=True)
+        plt.savefig(var.format(results_dir + "/05printDevicesChartByCriteria"))
         plt.show()
 
-        fig.savefig('{}/printDevicesChartByCriteria.png'.format(results_dir))
     else:
         explode =  explode
-        fig1, ax1 = plt.subplots(figsize=(7, 7))
-        ax1.pie(qtdDevices, colors=colors, explode=explode, pctdistance=0.3, radius=1, counterclock=False,
-                shadow=False, startangle=180, labeldistance=1.05, wedgeprops={'linewidth': 0.19, "edgecolor": "k"})  # ,autopct='%1.1f%%')
-        plt.legend(devices, bbox_to_anchor=(1, 0), loc="lower right", bbox_transform=plt.gcf().transFigure)
+        plt.rcParams.update({'font.size': 14.0})
+        fig1, ax1 = plt.subplots(figsize=(8, 8))
+        ax1.pie(qtdDevices, colors=colors, explode=explode, pctdistance=1.0, radius=1, counterclock=False,
+                shadow=False, startangle=180, labeldistance=1.05, wedgeprops={'linewidth': 0.19, "edgecolor": "k"},autopct='%1.1f%%')
+        plt.legend(devices, bbox_to_anchor=(1, 0), prop={'size': 11}, loc="lower right", bbox_transform=plt.gcf().transFigure)
 
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        ax1.set_title('Most Used Devices')
+        ax1.set_title('Most Considered Storage Devices on the Papers')
+        title = 'MostConsideredDevices'
         plt.tight_layout()
+        var = "{}/04printDevicesChart" + title + ".png"
+        subprocess.call("mkdir -m 755 -p /home/laercio/github/ReadingParsifal/Figs/04printDevicesChart", shell=True)
+        plt.savefig(var.format(results_dir + "/04printDevicesChart"))
         plt.show()
-
-        fig1.savefig('{}/printDevicesChart.png'.format(results_dir))
 
 def ExtractComments(comment, title, selection_criteria):
     comment = comment.replace("]\n[", "]-[");
@@ -1589,20 +2311,20 @@ def ExtractComments(comment, title, selection_criteria):
 def menu():
     escolha = int(input(''' Choose an option to print please!!
 
-1 - printStatus()
-2 - printPowerChart()
-3 - printPowerChartByCriteria()
-4 - printDevicesChart()
-5 - printDevicesChartByCriteria()
-6 - printBenchmarksChart()
-7 - printSelectioCriteria()
-8 - print_H2H_ReachedObject()
-9 - print_H2S_ReachedObject()
-10- printDict_H2SS_improvedObject()
-11- printDict_S2S_improvedObject()
-12- printDict_S2H_improvedObject()
-13- 
-14- 
+1 - printStatus(1x)
+2 - printPowerChart(1x)
+3 - printPowerChartByCriteria(1x)
+4 - printDevicesChart(1x)
+5 - printDevicesChartByCriteria(7x)
+6 - printBenchmarksChart(2x)
+7 - printSelectioCriteria(1x)
+8 - print_H2H_ReachedObject(1x)
+9 - print_H2S_ReachedObject(1x)
+10- printDict_H2SS_improvedObject(4x)
+11- printDict_S2S_improvedObject(1x)
+12- printDict_S2H_improvedObject(3x)
+13- printDict_S2SS_improvedObject(9x)
+14- printDict_ARCH_improvedObject(8x)
 15- 
 0 - Para voltar ao menu
 Escolha: \n''' ))
@@ -1652,10 +2374,23 @@ Escolha: \n''' ))
         pass
     elif escolha == 11:
         printDict_S2S_improvedObject()
+        printDict_S2S_implementedObject()
         menu()
         pass
     elif escolha == 12:
         printDict_S2H_improvedObject()
+        menu()
+        pass
+    elif escolha == 13:
+        printDict_S2SS_improvedObject()
+        menu()
+        pass
+    elif escolha == 14:
+        printDict_ARCH_improvedObject()
+        menu()
+        pass
+    elif escolha == 15:
+
         menu()
         pass
 
@@ -1674,13 +2409,7 @@ for f in filenames:
             selection_criteria = row[2]
             status = row[3]
             comments = row[4]
-
+#bibtex_key	title	selection_criteria	status	comments
             ExtractStatus(status, comments, selection_criteria)
-
-
-
 menu()
 
-
-
-#https://kite.com/python/answers/how-to-remove-specific-characters-from-a-string-in-python
