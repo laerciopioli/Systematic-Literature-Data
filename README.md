@@ -1,9 +1,9 @@
 
 This is a public repository for data verification.
 
-The data is exposed in articlesALL.xls file.
+The data are exposed in articlesALL.xls file.
 
-This data refers to a systematic review submmited to ACM CSUR 2020 publication.
+These data refer to a systematic review submmited to ACM CSUR 2020 publication.
 
 Here you will find the following contents:
   1 - Data used in the paper (articlesALL.xls)
